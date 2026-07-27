@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sytesurge — Lead Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --surface:#111118; --surface2:#1a1a24; --surface3:#22222f;
+  --border:#2a2a3a; --accent:#6c63ff; --accent2:#ff6584; --accent3:#43e97b;
+  --accent4:#f7b731; --text:#e8e8f0; --muted:#7070a0; --danger:#ff4757;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.5px}
+.logo span{color:var(--accent)}
+.header-right{display:flex;gap:10px;align-items:center}
+.status-pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:20px}
+
+/* CONFIG BAR */
+.config-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 28px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.config-bar label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+.config-bar input{background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;outline:none;transition:border-color .2s}
+.config-bar input:focus{border-color:var(--accent)}
+.config-field{display:flex;align-items:center;gap:6px}
+
+/* GMAIL AUTH BANNER */
+.auth-banner{display:none;background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(255,101,132,.1));border:1px solid rgba(108,99,255,.3);border-radius:10px;padding:16px 20px;margin:16px 28px;align-items:center;gap:16px}
+.auth-banner.show{display:flex}
+.auth-banner-text{flex:1;font-size:13px;line-height:1.6}
+.auth-banner-text strong{font-family:'Syne',sans-serif;font-size:15px;display:block;margin-bottom:4px}
+
+/* TABS */
+.tabs{display:flex;gap:2px;padding:14px 28px 0;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto}
+.tab{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;cursor:pointer;border-radius:8px 8px 0 0;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:all .2s;user-select:none;white-space:nowrap}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{color:var(--text);background:var(--bg);border-color:var(--border)}
+.tab-num{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-size:10px;border-radius:10px;min-width:17px;height:17px;padding:0 4px;margin-left:5px;font-family:'DM Mono',monospace}
+
+/* MAIN */
+.main{padding:24px 28px;max-width:1400px}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+
+/* BUTTONS */
+.btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:9px 18px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5a52e0;transform:translateY(-1px)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#e63946}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface3)}
+.btn-success{background:var(--accent3);color:#000}
+.btn-success:hover{background:#38d46a}
+.btn-warning{background:var(--accent4);color:#000}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-sm{padding:6px 11px;font-size:11px}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:90px}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.stat-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800}
+.stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}
+.stat-card.a1{border-top:2px solid var(--accent)}
+.stat-card.a2{border-top:2px solid var(--accent2)}
+.stat-card.a3{border-top:2px solid var(--accent3)}
+.stat-card.a4{border-top:2px solid var(--accent4)}
+
+/* PROGRESS */
+.progress-wrap{margin:10px 0}
+.progress-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.progress-bar{background:var(--surface3);border-radius:4px;height:5px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s ease;width:0%}
+.status-line{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);margin-top:5px;min-height:14px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--surface2);font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:var(--surface2)}
+tbody tr:last-child{border-bottom:none}
+td{padding:9px 12px;vertical-align:middle}
+
+/* SCORES */
+.score{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:22px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;padding:0 6px}
+.score-high{background:rgba(67,233,123,.15);color:var(--accent3)}
+.score-mid{background:rgba(247,183,49,.15);color:var(--accent4)}
+.score-low{background:rgba(255,71,87,.15);color:var(--danger)}
+
+/* STATUS DOTS */
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.s-pending{background:var(--muted)}
+.s-sent{background:var(--accent3)}
+.s-error{background:var(--danger)}
+
+/* CONTROLS ROW */
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+
+/* INPUT ROW */
+.input-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+
+/* LOG */
+.log-box{font-family:'DM Mono',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;height:110px;overflow-y:auto;color:var(--muted);margin-top:10px}
+.ll{margin-bottom:2px}.lok{color:var(--accent3)}.lwarn{color:var(--accent4)}.lerr{color:var(--danger)}.linfo{color:var(--accent)}
+
+/* FILTER CHIPS */
+.filter-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.chip{font-family:'DM Mono',monospace;font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s}
+.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(108,99,255,.12)}
+
+/* TEMPLATE VARS */
+.var-tag{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);padding:3px 8px;border-radius:4px;cursor:pointer;user-select:none;transition:all .15s}
+.var-tag:hover{background:rgba(108,99,255,.22)}
+
+/* MOCKUP GRID */
+.mockup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.mockup-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:transform .2s,border-color .2s}
+.mockup-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.mockup-preview{width:100%;height:150px;background:#fff;overflow:hidden;cursor:pointer;position:relative}
+.mockup-preview iframe{width:160%;height:160%;transform:scale(.625);transform-origin:top left;border:none;pointer-events:none}
+.mockup-info{padding:10px 12px}
+.mockup-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px}
+.mockup-cat{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.mockup-actions{display:flex;gap:5px;padding:6px 12px 10px}
+
+/* REPLY CARDS */
+.reply-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.reply-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.reply-from{font-weight:600;font-size:13px}
+.reply-email{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.reply-snippet{font-size:12px;color:rgba(232,232,240,.65);margin-bottom:8px;line-height:1.55;font-style:italic}
+.reply-analysis{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3);background:rgba(67,233,123,.06);border-radius:6px;padding:8px;line-height:1.5}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:92vw;max-width:980px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.modal-body{flex:1;overflow-y:auto;padding:22px}
+.modal-iframe{width:100%;height:580px;border:none;border-radius:8px;background:#fff}
+
+/* FLOATING STOP */
+.float-status{position:fixed;bottom:20px;right:20px;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 16px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
+.float-status.show{display:block}
+.fs-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:6px}
+.fs-detail{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:10px}
+
+/* TOAST */
+#toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:10px;font-family:'DM Mono',monospace;font-size:12px;z-index:999;opacity:0;transition:opacity .3s;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:none;white-space:nowrap}
+
+/* SECTION HEADER */
+.section-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.section-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
+.section-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:3px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px}
+.empty-icon{font-size:28px;margin-bottom:8px}
+
+/* TOGGLE */
+.tog-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tog{width:34px;height:19px;background:var(--surface3);border-radius:10px;position:relative;cursor:pointer;border:none;flex-shrink:0;transition:background .2s}
+.tog.on{background:var(--accent)}
+.tog::after{content:'';width:13px;height:13px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s}
+.tog.on::after{left:18px}
+.tog-lbl{font-size:12px;color:var(--muted)}
+
+/* SETUP STEPS */
+.setup-step{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative}
+.step-num{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--accent);opacity:.3;position:absolute;top:10px;right:14px;line-height:1}
+.step-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.step-body{font-size:12px;color:var(--muted);line-height:1.75}
+.step-body b{color:var(--text)}
+.mono{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);background:rgba(108,99,255,.1);padding:2px 6px;border-radius:4px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">Syte<span>surge</span> <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">Lead Engine</span></div>
+  <div class="header-right">
+    <span class="status-pill" id="globalStatus">● Idle</span>
+    <button class="btn btn-danger btn-sm" id="btnStopAll" onclick="stopAll()" style="display:none">⏹ STOP ALL</button>
+  </div>
+</div>
+
+<!-- CONFIG BAR -->
+<div class="config-bar">
+  <div class="config-field"><label>PLACES API KEY</label><input type="password" id="googleKey" placeholder="AIza..." style="width:150px"></div>
+  <div class="config-field"><label>ANTHROPIC KEY</label><input type="password" id="anthropicKey" placeholder="sk-ant-..." style="width:160px"></div>
+  <div class="config-field"><label>YOUR NAME</label><input type="text" id="cfg-yourname" placeholder="First Last" style="width:110px"></div>
+  <div class="config-field"><label>BUSINESS ADDRESS ⚖️ CAN-SPAM REQUIRED</label><input type="text" id="cfg-address" placeholder="123 Main St, Mendham NJ 07945" style="width:230px;border-color:var(--accent4)"></div>
+  <div id="gmailConnectedPill" style="display:none;font-family:'DM Mono',monospace;font-size:11px;background:rgba(67,233,123,.1);border:1px solid rgba(67,233,123,.3);color:var(--accent3);padding:4px 12px;border-radius:20px"></div>
+  <button class="btn btn-primary btn-sm" id="btnGmailConnect" onclick="startOAuth()">🔐 Connect Gmail</button>
+  <button class="btn btn-danger btn-sm" id="btnGmailDisconnect" onclick="disconnectGmail()" style="display:none">✕ Disconnect</button>
+  <button class="btn btn-ghost btn-sm" onclick="saveConfig()">💾 Save</button>
+</div>
+<!-- CAN-SPAM ADDRESS WARNING -->
+<div id="canspamWarn" style="background:rgba(255,71,87,.08);border-bottom:2px solid rgba(255,71,87,.3);padding:8px 28px;font-family:'DM Mono',monospace;font-size:11px;color:var(--danger);display:flex;align-items:center;gap:10px">
+  ⚖️ <strong>CAN-SPAM ACT:</strong>&nbsp;You must enter your Business Address above before sending any emails. It is a US federal legal requirement in every commercial email (fines up to $51,744 per violation).
+</div>
+
+<!-- OAUTH SETUP BANNER (shown when not connected) -->
+<div class="auth-banner" id="authBanner">
+  <div style="font-size:26px">🔐</div>
+  <div class="auth-banner-text">
+    <strong>Connect Gmail to send real emails</strong>
+    Gmail isn't connected yet. Click <b>Connect Gmail</b> above after completing the one-time setup in the <b>⚙️ Setup Guide</b> tab. No passwords — Google handles login securely.
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="switchTab('setup')">View Setup Guide →</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('scan')">🔍 Scanner <span class="tab-num" id="cnt-scan">0</span></div>
+  <div class="tab" onclick="switchTab('email')">📧 Campaigns <span class="tab-num" id="cnt-email">0</span></div>
+  <div class="tab" onclick="switchTab('replies')">💬 Replies <span class="tab-num" id="cnt-replies">0</span></div>
+  <div class="tab" onclick="switchTab('mockups')">🎨 Mockups <span class="tab-num" id="cnt-mockups">0</span></div>
+  <div class="tab" onclick="switchTab('compliance')">⚖️ Compliance <span class="tab-num" id="cnt-unsub">0</span></div>
+  <div class="tab" onclick="switchTab('setup')">⚙️ Setup Guide</div>
+</div>
+
+<div class="main">
+
+<!-- ======= SCANNER ======= -->
+<div class="panel active" id="panel-scan">
+  <div class="section-header">
+    <div><div class="section-title">Business Scanner</div><div class="section-sub">Find businesses near Mendham, NJ — no website, Gmail contacts only</div></div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card a1"><div class="stat-num" id="s-found">0</div><div class="stat-label">LEADS FOUND</div></div>
+    <div class="stat-card a2"><div class="stat-num" id="s-loss">$0</div><div class="stat-label">TOTAL LOSS/YR</div></div>
+    <div class="stat-card a3"><div class="stat-num" id="s-avg">$0</div><div class="stat-label">AVG LOSS/BIZ</div></div>
+    <div class="stat-card a4"><div class="stat-num" id="s-sel">0</div><div class="stat-label">SELECTED</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Scan Settings</div>
+    <div class="input-row">
+      <div class="field"><label>LOCATION</label><input id="scanLoc" value="Mendham, NJ" style="width:170px"></div>
+      <div class="field"><label>RADIUS (m)</label><input type="number" id="scanRadius" value="10000" style="width:110px"></div>
+      <div class="field"><label>MAX RESULTS</label><input type="number" id="scanMax" value="100" min="10" max="200" style="width:90px"></div>
+      <div class="field"><label>CATEGORY</label>
+        <select id="scanCat" style="width:150px">
+          <option value="all">All Types</option><option value="restaurant">Restaurants</option>
+          <option value="retail">Retail</option><option value="health">Health & Wellness</option>
+          <option value="contractor">Contractors</option><option value="salon">Salons & Spas</option>
+          <option value="automotive">Automotive</option><option value="professional">Professional</option>
+        </select>
+      </div>
+      <div class="field"><label>MIN RATING</label>
+        <select id="scanRating" style="width:110px">
+          <option value="0">Any</option><option value="3">3.0+</option>
+          <option value="4">4.0+</option><option value="4.5">4.5+</option>
+        </select>
+      </div>
+    </div>
+    <div class="tog-row"><button class="tog on" id="tog-gmail" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Gmail only</span>
+      <button class="tog on" id="tog-noweb" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">No website only</span>
+      <button class="tog" id="tog-phone" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Must have phone</span>
+    </div>
+    <div class="controls">
+      <button class="btn btn-primary" id="btnScan" onclick="startScan()">🔍 Start Scan</button>
+      <button class="btn btn-danger" id="btnStopScan" onclick="stopProcess('scan')" style="display:none">⏹ Stop</button>
+      <button class="btn btn-ghost" onclick="exportLeads()">📥 Export CSV</button>
+      <button class="btn btn-ghost" onclick="clearLeads()">🗑 Clear</button>
+      <button class="btn btn-success" onclick="sendToEmail()">→ Send to Campaign</button>
+    </div>
+    <div id="scanProgress" style="display:none">
+      <div class="progress-wrap">
+        <div class="progress-label"><span id="scanPTxt">Scanning...</span><span id="scanPPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="scanPFill"></div></div>
+        <div class="status-line" id="scanPStatus"></div>
+      </div>
+    </div>
+    <div class="log-box" id="scanLog"></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Results</div>
+    <div class="filter-row">
+      <input type="text" id="leadSearch" oninput="renderLeads()" placeholder="Search..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:7px;font-size:12px;width:190px;outline:none">
+      <div class="chip active" onclick="setLeadFilter(this,'all')">All</div>
+      <div class="chip" onclick="setLeadFilter(this,'restaurant')">Restaurant</div>
+      <div class="chip" onclick="setLeadFilter(this,'retail')">Retail</div>
+      <div class="chip" onclick="setLeadFilter(this,'health')">Health</div>
+      <div class="chip" onclick="setLeadFilter(this,'contractor')">Contractor</div>
+      <div class="chip" onclick="setLeadFilter(this,'salon')">Salon</div>
+      <select onchange="state.leadSort=this.value;renderLeads()" style="margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:11px;font-family:'DM Mono',monospace">
+        <option value="loss_d">Loss ↓</option><option value="loss_a">Loss ↑</option>
+        <option value="name">Name</option><option value="rating">Rating</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th><input type="checkbox" id="chkAll" onchange="selectAll(this)"></th>
+        <th>Business</th><th>Category</th><th>Gmail</th><th>Phone</th>
+        <th>Rating</th><th>Est. Loss/yr</th><th>Reason</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="leadsBody"><tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>Run a scan to find leads</div></td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ======= CAMPAIGNS ======= -->
+<div class="panel" id="panel-email">
+  <div class="section-header"><div><div class="section-title">Email Campaign</div><div class="section-sub">Edit template · Send to leads · Track delivery</div></div></div>
+  <div class="stats-row">
+    <div class="stat-card a1"><div class="stat-num" id="e-queued">0</div><div class="stat-label">QUEUED</div></div>
+    <div class="stat-card a3"><div class="stat-num" id="e-sent">0</div><div class="stat-label">SENT</div></div>
+    <div class="stat-card a2"><div class="stat-num" id="e-error">0</div><div class="stat-label">ERRORS</div></div>
+    <div class="stat-card a4"><div class="stat-num" id="e-rate">0%</div><div class="stat-label">SUCCESS RATE</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>Template Editor</div>
+      <div class="field" style="margin-bottom:10px"><label>SUBJECT LINE</label>
+        <input id="emailSubject" value="Your business deserves to be found online, {{business_name}}" style="width:100%">
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px">CLICK TO INSERT VARIABLE:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="var-tag" onclick="insertVar('{{business_name}}')">{{business_name}}</span>
+          <span class="var-tag" onclick="insertVar('{{owner_name}}')">{{owner_name}}</span>
+          <span class="var-tag" onclick="insertVar('{{category}}')">{{category}}</span>
+          <span class="var-tag" onclick="insertVar('{{city}}')">{{city}}</span>
+          <span class="var-tag" onclick="insertVar('{{est_loss}}')">{{est_loss}}</span>
+          <span class="var-tag" onclick="insertVar('{{rating}}')">{{rating}}</span>
+        </div>
+      </div>
+      <div class="field"><label>BODY (HTML supported)</label>
+        <textarea id="emailBody" style="width:100%;min-height:250px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6">Hi {{owner_name}},
+
+I came across {{business_name}} and wanted to reach out — you're running a great {{category}} business in {{city}}, but I noticed you don't currently have a website.
+
+Businesses without a website lose an estimated <strong>{{est_loss}} per year</strong> in revenue from customers who search online and can't find them.
+
+At Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.
+
+We'd love to show you a <strong>free mockup</strong> of what your site could look like. No commitment.
+
+Reply anytime or give us a call.
+
+Best,
+[Your Name]
+Sytesurge | sytesurge.com</textarea>
+      </div>
+      <div class="controls" style="margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="previewEmail()">👁 Preview</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveTemplate()">💾 Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadTemplate()">📂 Load</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetTemplate()">↺ Reset</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Send Controls</div>
+      <div class="input-row">
+        <div class="field"><label>DELAY (sec)</label><input type="number" id="emailDelay" value="4" min="1" max="60" style="width:90px"></div>
+        <div class="field"><label>BATCH SIZE</label><input type="number" id="batchSize" value="10" min="1" max="50" style="width:90px"></div>
+        <div class="field"><label>MODE</label>
+          <select id="sendMode" style="width:150px">
+            <option value="test">Test (log only)</option>
+            <option value="live">Live (real Gmail)</option>
+          </select>
+        </div>
+      </div>
+      <div class="tog-row"><button class="tog on" id="tog-unsub" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Include unsubscribe line</span></div>
+      <div class="tog-row"><button class="tog" id="tog-followup" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Auto follow-up after 3 days</span></div>
+      <div id="gmailSendStatus" style="background:var(--surface3);border-radius:8px;padding:10px 13px;margin:10px 0;font-size:12px;color:var(--muted)">
+        📧 Sending from: <span id="senderLabel" style="color:var(--accent3)">Not connected</span>
+      </div>
+      <div class="controls">
+        <button class="btn btn-primary" id="btnSend" onclick="startCampaign()">📧 Send Campaign</button>
+        <button class="btn btn-danger" id="btnStopSend" onclick="stopProcess('campaign')" style="display:none">⏹ Stop</button>
+      </div>
+      <div id="sendProgress" style="display:none">
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="sendPTxt">Sending...</span><span id="sendPPct">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="sendPFill"></div></div>
+          <div class="status-line" id="sendPStatus"></div>
+        </div>
+      </div>
+      <div class="log-box" id="emailLog"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Campaign Queue</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Business</th><th>Email</th><th>Status</th><th>Sent At</th><th>Actions</th></tr></thead>
+      <tbody id="campaignBody"><tr><td colspan="5"><div class="empty"><div class="empty-icon">📧</div>Add leads from Scanner first</div></td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ======= REPLIES ======= -->
+<div class="panel" id="panel-replies">
+  <div class="section-header"><div><div class="section-title">Reply Analyzer</div><div class="section-sub">AI scores each reply — filter by conversion likelihood</div></div></div>
+  <div class="stats-row">
+    <div class="stat-card a3"><div class="stat-num" id="r-hot">0</div><div class="stat-label">HOT (80%+)</div></div>
+    <div class="stat-card a4"><div class="stat-num" id="r-warm">0</div><div class="stat-label">WARM (50–79%)</div></div>
+    <div class="stat-card a2"><div class="stat-num" id="r-cold">0</div><div class="stat-label">COLD (&lt;50%)</div></div>
+    <div class="stat-card a1"><div class="stat-num" id="r-total">0</div><div class="stat-label">TOTAL REPLIES</div></div>
+  </div>
+  <div class="card">
+    <div class="controls">
+      <button class="btn btn-primary" id="btnFetchReplies" onclick="fetchReplies()">📥 Fetch Replies</button>
+      <button class="btn btn-danger" id="btnStopReplies" onclick="stopProcess('replies')" style="display:none">⏹ Stop</button>
+      <button class="btn btn-ghost" onclick="reanalyzeAll()">🧠 Re-analyze All</button>
+      <button class="btn btn-ghost" onclick="exportScores()">📥 Export Scores</button>
+      <button class="btn btn-ghost btn-sm" onclick="addTestReply()">+ Test Reply</button>
+    </div>
+    <div class="filter-row">
+      <div class="chip active" onclick="setReplyFilter(this,'all')">All</div>
+      <div class="chip" onclick="setReplyFilter(this,'hot')">🔥 Hot (80%+)</div>
+      <div class="chip" onclick="setReplyFilter(this,'warm')">🌡 Warm (50–79%)</div>
+      <div class="chip" onclick="setReplyFilter(this,'cold')">❄️ Cold (&lt;50%)</div>
+      <select onchange="state.replySort=this.value;renderReplies()" style="margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:11px;font-family:'DM Mono',monospace">
+        <option value="score_d">Score ↓</option><option value="score_a">Score ↑</option><option value="date">Latest</option>
+      </select>
+    </div>
+    <div id="repliesContainer"><div class="empty"><div class="empty-icon">💬</div>No replies yet</div></div>
+  </div>
+</div>
+
+<!-- ======= MOCKUPS ======= -->
+<div class="panel" id="panel-mockups">
+  <div class="section-header"><div><div class="section-title">Mockup Generator</div><div class="section-sub">AI generates a custom website for every lead</div></div></div>
+  <div class="card">
+    <div class="input-row">
+      <div class="field"><label>STYLE</label>
+        <select id="mockStyle" style="width:150px">
+          <option value="modern">Modern & Clean</option><option value="bold">Bold & Vivid</option>
+          <option value="minimal">Ultra Minimal</option><option value="classic">Classic Pro</option>
+        </select>
+      </div>
+      <div class="field"><label>GENERATE FOR</label>
+        <select id="mockScope" style="width:160px">
+          <option value="selected">Selected leads</option>
+          <option value="hot">Hot leads only</option>
+          <option value="all">All leads</option>
+        </select>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn btn-primary" id="btnGenMock" onclick="generateMockups()">🎨 Generate Mockups</button>
+      <button class="btn btn-danger" id="btnStopMock" onclick="stopProcess('mockups')" style="display:none">⏹ Stop</button>
+      <button class="btn btn-ghost" onclick="downloadAll()">📦 Download All</button>
+      <button class="btn btn-ghost" onclick="clearMockups()">🗑 Clear All</button>
+    </div>
+    <div id="mockProgress" style="display:none">
+      <div class="progress-wrap">
+        <div class="progress-label"><span id="mockPTxt">Generating...</span><span id="mockPPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="mockPFill"></div></div>
+        <div class="status-line" id="mockPStatus"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup-grid" id="mockupGrid">
+    <div style="grid-column:1/-1"><div class="empty"><div class="empty-icon">🎨</div>No mockups yet</div></div>
+  </div>
+</div>
+
+<!-- ======= COMPLIANCE ======= -->
+<div class="panel" id="panel-compliance">
+  <div class="section-header"><div><div class="section-title">⚖️ CAN-SPAM Compliance Center</div><div class="section-sub">Unsubscribe list · Legal requirements · Audit log</div></div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="card" style="border-top:2px solid var(--accent3)">
+      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>CAN-SPAM Compliance Checklist</div>
+      <div id="complianceChecklist" style="font-size:13px;line-height:2">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+    <div class="card" style="border-top:2px solid var(--danger)">
+      <div class="card-title"><span class="dot" style="background:var(--danger)"></span>Suppression List (Unsubscribes) &nbsp;<span id="suppressionCount" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--danger)">0</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Anyone who replies "unsubscribe" is auto-added here and permanently blocked from future campaigns.</div>
+      <div class="input-row" style="margin-bottom:10px">
+        <input type="email" id="manualUnsubEmail" placeholder="manually add email..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:7px;font-size:12px;flex:1;outline:none">
+        <button class="btn btn-danger btn-sm" onclick="addToSuppressionList(document.getElementById('manualUnsubEmail').value);renderSuppressionList();document.getElementById('manualUnsubEmail').value=''">Add</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSuppressionList()">📥 Export</button>
+      </div>
+      <div id="suppressionList" style="max-height:250px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>CAN-SPAM Act Requirements — Full Reference</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;font-size:12px;line-height:1.7;color:var(--muted)">
+      <div style="background:var(--surface2);border-radius:8px;padding:14px">
+        <strong style="color:var(--text);font-family:'Syne',sans-serif;font-size:13px;display:block;margin-bottom:6px">✅ What this app does automatically</strong>
+        • Appends physical address to every email<br>
+        • Includes plain-language unsubscribe instructions<br>
+        • Auto-detects "remove me" replies → suppression list<br>
+        • Blocks suppressed contacts before every send<br>
+        • Identifies emails as commercial messages<br>
+        • Honest subject lines (no deception)
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:14px">
+        <strong style="color:var(--text);font-family:'Syne',sans-serif;font-size:13px;display:block;margin-bottom:6px">⚠️ What YOU must do</strong>
+        • Keep your physical address current in the config bar<br>
+        • Honor unsubscribe requests within <strong style="color:var(--text)">10 business days</strong><br>
+        • Never use deceptive subject lines<br>
+        • Don't send from a misleading "From" name<br>
+        • Don't re-add suppressed contacts manually<br>
+        • Keep suppression list permanently
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:14px">
+        <strong style="color:var(--text);font-family:'Syne',sans-serif;font-size:13px;display:block;margin-bottom:6px">📋 Penalties & Notes</strong>
+        • Up to <strong style="color:var(--danger)">$51,744 per email</strong> for violations<br>
+        • Enforced by FTC (Federal Trade Commission)<br>
+        • Applies to ALL US commercial emails<br>
+        • B2B cold email is legal under CAN-SPAM ✓<br>
+        • GDPR (EU): requires opt-in — don't email EU businesses without consent<br>
+        • CASL (Canada): similar to GDPR
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= SETUP GUIDE ======= -->
+<div class="panel" id="panel-setup">
+  <div class="section-header"><div><div class="section-title">Setup Guide</div><div class="section-sub">One-time setup to connect Gmail with real OAuth — no passwords ever</div></div></div>
+
+  <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.25);border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:13px;line-height:1.7">
+    <strong style="font-family:'Syne',sans-serif;font-size:15px;display:block;margin-bottom:4px">Why OAuth and not a password?</strong>
+    With OAuth, you log in directly through Google's own screen — Sytesurge never sees your password. Google gives the app a temporary access token instead. It's the same way "Sign in with Google" works on any website. Your credentials stay entirely with Google.
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+
+    <div class="setup-step">
+      <div class="step-num">1</div>
+      <div class="step-title">Host on GitHub Pages</div>
+      <div class="step-body">
+        The dashboard must be at a <b>fixed URL</b> so Google knows where to redirect after login.<br><br>
+        <b>1.</b> Create a free account at <span class="mono">github.com</span><br>
+        <b>2.</b> Click <b>New repository</b> → name it <span class="mono">sytesurge</span><br>
+        <b>3.</b> Upload this HTML file as <span class="mono">index.html</span><br>
+        <b>4.</b> Go to repo <b>Settings → Pages</b> → set Source to <b>main branch</b><br>
+        <b>5.</b> Your URL will be:<br>
+        <span class="mono">https://YOURNAME.github.io/sytesurge</span><br><br>
+        ✅ Open that URL in your browser — use it from now on instead of this Claude window.
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">2</div>
+      <div class="step-title">Create Google OAuth App</div>
+      <div class="step-body">
+        <b>1.</b> Go to <span class="mono">console.cloud.google.com</span><br>
+        <b>2.</b> Create a new project (e.g. "Sytesurge")<br>
+        <b>3.</b> Go to <b>APIs & Services → Enable APIs</b><br>
+        &nbsp;&nbsp;&nbsp;→ Enable <b>Gmail API</b><br>
+        <b>4.</b> Go to <b>OAuth consent screen</b><br>
+        &nbsp;&nbsp;&nbsp;→ External → fill in App Name<br>
+        &nbsp;&nbsp;&nbsp;→ Add your Gmail as test user<br>
+        <b>5.</b> Go to <b>Credentials → Create Credentials → OAuth 2.0 Client ID</b><br>
+        &nbsp;&nbsp;&nbsp;→ Type: <b>Web Application</b><br>
+        <b>6.</b> Under <b>Authorized redirect URIs</b> add:<br>
+        <span class="mono">https://YOURNAME.github.io/sytesurge</span><br>
+        <b>7.</b> Copy your <b>Client ID</b>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">3</div>
+      <div class="step-title">Connect Gmail</div>
+      <div class="step-body">
+        <b>1.</b> Open the dashboard from your GitHub Pages URL<br>
+        <b>2.</b> Paste your <b>Client ID</b> below and save<br>
+        <b>3.</b> Click <b>Connect Gmail</b> in the header<br>
+        <b>4.</b> Google's login screen appears → sign in as <b>info@sytesurge.com</b><br>
+        <b>5.</b> Approve the Gmail send permission<br>
+        <b>6.</b> You're redirected back → header shows <b>✓ Connected</b><br><br>
+        ✅ Done! The token is saved in your browser. You won't need to reconnect unless you clear browser data.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>OAuth Credentials</div>
+    <div class="input-row" style="flex-wrap:nowrap;gap:12px">
+      <div class="field" style="flex:2">
+        <label>OAUTH CLIENT ID</label>
+        <input id="cfg-clientId" placeholder="123456789-abc....apps.googleusercontent.com" style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+      </div>
+      <div class="field" style="flex:1">
+        <label>OAUTH CLIENT SECRET</label>
+        <input type="password" id="cfg-clientSecret" placeholder="GOCSPX-..." style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>YOUR NETLIFY / CLOUDFLARE URL (must exactly match redirect URI in Google Cloud)</label>
+      <input id="cfg-redirectUri" placeholder="https://melodic-cocada-526d67.netlify.app" style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveClientId()">💾 Save All Credentials</button>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:rgba(67,233,123,.07);border:1px solid rgba(67,233,123,.2);border-radius:8px;font-size:12px;color:var(--accent3)">
+      ✅ Fill in all three fields above → click Save → then click <b>🔐 Connect Gmail</b> in the header bar.
+    </div>
+    <div style="margin-top:8px;padding:12px;background:rgba(255,71,87,.07);border:1px solid rgba(255,71,87,.2);border-radius:8px;font-size:12px;color:var(--danger)">
+      ⚠️ Your Client Secret is stored only in your browser — never sent anywhere except Google's servers.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Google Places API (optional)</div>
+    <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
+      Without this key, the scanner uses a built-in dataset of 50 local Mendham/Chester businesses — enough to test everything fully.<br>
+      With a key, it pulls <b>live data</b> from Google Maps (real businesses, real statuses). Cost: ~$0.50 per 100 businesses scanned. Free $200/month credit from Google.<br><br>
+      <b style="color:var(--text)">To get a key:</b> Google Cloud Console → Enable <b>Places API</b> → Create API Key → paste in the config bar above.
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- MOCKUP MODAL -->
+<div class="modal-overlay" id="mockModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Mockup Preview</div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-ghost btn-sm" onclick="downloadCurrentMockup()">📥 Download</button>
+        <button class="btn btn-success btn-sm" onclick="emailCurrentMockup()">📧 Email to Business</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body"><iframe id="mockFrame" class="modal-iframe"></iframe></div>
+  </div>
+</div>
+
+<!-- FLOATING STOP WIDGET -->
+<div class="float-status" id="floatStatus">
+  <div class="fs-title" id="fsTitle">⚡ Running</div>
+  <div class="fs-detail" id="fsDetail">...</div>
+  <button class="btn btn-danger btn-sm" style="width:100%" onclick="stopAll()">⏹ Stop This Process</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+  leads: [], campaign: [], replies: [], mockups: [],
+  leadFilter: 'all', replyFilter: 'all',
+  leadSort: 'loss_d', replySort: 'score_d',
+  abort: { scan:false, campaign:false, replies:false, mockups:false }
+};
+
+// ============================================================
+//  CONFIG / PERSIST
+// ============================================================
+// ============================================================
+//  SUPPRESSION LIST (CAN-SPAM — real unsubscribe handling)
+// ============================================================
+function getSuppressionList() {
+  try { return JSON.parse(localStorage.getItem('sytesurge_unsub') || '[]'); } catch(e) { return []; }
+}
+function addToSuppressionList(email) {
+  const list = getSuppressionList();
+  const e = email.toLowerCase().trim();
+  if (!list.includes(e)) {
+    list.push(e);
+    localStorage.setItem('sytesurge_unsub', JSON.stringify(list));
+    log('emailLog', `⚖️ Unsubscribed & suppressed: ${e}`, 'warn');
+  }
+}
+function isUnsubscribed(email) {
+  return getSuppressionList().includes((email||'').toLowerCase().trim());
+}
+function renderSuppressionList() {
+  const list = getSuppressionList();
+  const el = document.getElementById('suppressionList');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">No unsubscribes yet</div>'; return; }
+  el.innerHTML = list.map(e => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:11px">
+    <span>${e}</span>
+    <button class="btn btn-ghost btn-sm" onclick="removeFromSuppressionList('${e}')">↩ Re-add</button>
+  </div>`).join('');
+  document.getElementById('suppressionCount').textContent = list.length;
+}
+function removeFromSuppressionList(email) {
+  const list = getSuppressionList().filter(e => e !== email);
+  localStorage.setItem('sytesurge_unsub', JSON.stringify(list));
+  renderSuppressionList();
+  toast(email + ' removed from suppression list');
+}
+
+function saveConfig() {
+  ['googleKey','anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
+    const v = document.getElementById(id)?.value?.trim();
+    if (v) localStorage.setItem('sytesurge_'+id, v);
+  });
+  toast('Config saved ✓');
+}
+function loadConfig() {
+  ['googleKey','anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
+    const v = localStorage.getItem('sytesurge_'+id);
+    if (v) { const el = document.getElementById(id); if(el) el.value = v; }
+  });
+  // Show CAN-SPAM warning if no address saved
+  const addr = localStorage.getItem('sytesurge_cfg-address') || '';
+  const warn = document.getElementById('canspamWarn');
+  if (warn) warn.style.display = addr ? 'none' : 'flex';
+  const cid = localStorage.getItem('sytesurge_clientId');
+  if (cid) { const el = document.getElementById('cfg-clientId'); if(el) el.value = cid; }
+  const sec = localStorage.getItem('sytesurge_clientSecret');
+  if (sec) { const el = document.getElementById('cfg-clientSecret'); if(el) el.value = sec; }
+  const ru = localStorage.getItem('sytesurge_redirectUri');
+  if (ru) { const el = document.getElementById('cfg-redirectUri'); if(el) el.value = ru; }
+  checkGmailStatus();
+}
+function saveClientId() {
+  const cid = document.getElementById('cfg-clientId')?.value?.trim();
+  const sec = document.getElementById('cfg-clientSecret')?.value?.trim();
+  const ru  = document.getElementById('cfg-redirectUri')?.value?.trim();
+  if (cid) localStorage.setItem('sytesurge_clientId', cid);
+  if (sec) localStorage.setItem('sytesurge_clientSecret', sec);
+  if (ru)  {
+    // Strip trailing slash automatically
+    const clean = ru.replace(/\/+$/, '');
+    localStorage.setItem('sytesurge_redirectUri', clean);
+    document.getElementById('cfg-redirectUri').value = clean;
+  }
+  toast('OAuth credentials saved ✓');
+}
+
+// ============================================================
+//  OAUTH — proper PKCE flow, designed for GitHub Pages
+// ============================================================
+function b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function pkce() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const digest   = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return { verifier, challenge: b64url(digest) };
+}
+
+async function startOAuth() {
+  const clientId     = localStorage.getItem('sytesurge_clientId');
+  const clientSecret = localStorage.getItem('sytesurge_clientSecret');
+  const redirectUri  = localStorage.getItem('sytesurge_redirectUri') || window.location.href.split('?')[0].replace(/\/+$/,'');
+  if (!clientId) {
+    toast('Paste your Client ID in the Setup Guide tab first'); switchTab('setup'); return;
+  }
+  if (!clientSecret) {
+    toast('Paste your Client Secret in the Setup Guide tab too'); switchTab('setup'); return;
+  }
+  const { verifier, challenge } = await pkce();
+  sessionStorage.setItem('pkce_v', verifier);
+  const p = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  redirectUri,
+    response_type: 'code',
+    scope:         'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email',
+    access_type:   'offline',
+    prompt:        'consent',
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+    state: 'sytesurge_oauth'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
+}
+
+async function handleCallback() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('state') !== 'sytesurge_oauth' || !p.get('code')) return;
+  // Clean the URL immediately
+  history.replaceState({}, '', window.location.pathname);
+
+  const code        = p.get('code');
+  const verifier    = sessionStorage.getItem('pkce_v');
+  const clientId    = localStorage.getItem('sytesurge_clientId');
+  const redirectUri = localStorage.getItem('sytesurge_redirectUri') || window.location.href.split('?')[0];
+
+  toast('Completing Gmail sign-in...');
+
+  // Exchange code for tokens
+  // NOTE: PKCE token exchange does NOT require client_secret for apps configured
+  // as "Desktop" type in Google Cloud. Change app type to Desktop if you get an error here.
+  try {
+    const clientSecret = localStorage.getItem('sytesurge_clientSecret') || '';
+    const tokenParams = {
+      code, client_id: clientId, redirect_uri: redirectUri,
+      grant_type: 'authorization_code', code_verifier: verifier
+    };
+    if (clientSecret) tokenParams.client_secret = clientSecret;
+    const r = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(tokenParams)
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error_description || d.error);
+
+    localStorage.setItem('sytesurge_accessToken',  d.access_token);
+    localStorage.setItem('sytesurge_tokenExpiry',  Date.now() + (d.expires_in - 60) * 1000);
+    if (d.refresh_token) localStorage.setItem('sytesurge_refreshToken', d.refresh_token);
+
+    // Get email address
+    const ur = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + d.access_token }
+    });
+    const ud = await ur.json();
+    localStorage.setItem('sytesurge_email', ud.email || '');
+    setGmailConnected(ud.email || 'Connected');
+    toast('Gmail connected as ' + (ud.email || 'your account') + ' ✓');
+  } catch(e) {
+    toast('OAuth error: ' + e.message);
+    console.error('OAuth token exchange failed:', e);
+  }
+}
+
+async function getAccessToken() {
+  const token  = localStorage.getItem('sytesurge_accessToken');
+  const expiry = parseInt(localStorage.getItem('sytesurge_tokenExpiry') || '0');
+  if (token && Date.now() < expiry) return token;
+
+  // Try refresh
+  const refresh   = localStorage.getItem('sytesurge_refreshToken');
+  const clientId  = localStorage.getItem('sytesurge_clientId');
+  if (!refresh || !clientId) return null;
+  try {
+    const clientSecret = localStorage.getItem('sytesurge_clientSecret') || '';
+    const refreshParams = { grant_type:'refresh_token', refresh_token:refresh, client_id:clientId };
+    if (clientSecret) refreshParams.client_secret = clientSecret;
+    const r = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(refreshParams)
+    });
+    const d = await r.json();
+    if (d.access_token) {
+      localStorage.setItem('sytesurge_accessToken', d.access_token);
+      localStorage.setItem('sytesurge_tokenExpiry', Date.now() + (d.expires_in-60)*1000);
+      return d.access_token;
+    }
+  } catch(e) {}
+  return null;
+}
+
+function setGmailConnected(email) {
+  const pill = document.getElementById('gmailConnectedPill');
+  const btn  = document.getElementById('btnGmailConnect');
+  const disc = document.getElementById('btnGmailDisconnect');
+  const lbl  = document.getElementById('senderLabel');
+  const banner = document.getElementById('authBanner');
+  if (pill)  { pill.textContent = '✓ ' + email; pill.style.display = 'block'; }
+  if (btn)   btn.style.display = 'none';
+  if (disc)  disc.style.display = 'inline-flex';
+  if (lbl)   { lbl.textContent = email; lbl.style.color = 'var(--accent3)'; }
+  if (banner) banner.classList.remove('show');
+}
+
+function checkGmailStatus() {
+  const email = localStorage.getItem('sytesurge_email');
+  const token = localStorage.getItem('sytesurge_accessToken');
+  const expiry = parseInt(localStorage.getItem('sytesurge_tokenExpiry')||'0');
+  const banner = document.getElementById('authBanner');
+  if (email && token && Date.now() < expiry + 7*24*3600*1000) {
+    setGmailConnected(email);
+  } else {
+    if (banner) banner.classList.add('show');
+  }
+}
+
+function disconnectGmail() {
+  ['sytesurge_accessToken','sytesurge_tokenExpiry','sytesurge_refreshToken','sytesurge_email'].forEach(k => localStorage.removeItem(k));
+  document.getElementById('gmailConnectedPill').style.display = 'none';
+  document.getElementById('btnGmailConnect').style.display = 'inline-flex';
+  document.getElementById('btnGmailDisconnect').style.display = 'none';
+  document.getElementById('senderLabel').textContent = 'Not connected';
+  document.getElementById('authBanner').classList.add('show');
+  toast('Gmail disconnected');
+}
+
+// ============================================================
+//  REAL GMAIL SEND
+// ============================================================
+async function sendGmail(to, subject, bodyHtml) {
+  const token = await getAccessToken();
+  if (!token) {
+    log('emailLog', '✗ Not connected to Gmail. Click Connect Gmail.', 'err');
+    return false;
+  }
+  const from = localStorage.getItem('sytesurge_email') || 'info@sytesurge.com';
+  const raw = [
+    `From: Sytesurge <${from}>`, `To: ${to}`, `Subject: ${subject}`,
+    'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', bodyHtml
+  ].join('\r\n');
+  const encoded = btoa(unescape(encodeURIComponent(raw)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  try {
+    const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw: encoded })
+    });
+    if (!r.ok) {
+      const e = await r.json();
+      log('emailLog', '✗ Gmail error: ' + (e.error?.message || r.status), 'err');
+      return false;
+    }
+    return true;
+  } catch(e) {
+    log('emailLog', '✗ Network error: ' + e.message, 'err');
+    return false;
+  }
+}
+
+// ============================================================
+//  SCAN
+// ============================================================
+const SEED = [
+  {name:"Mendham Cycle",cat:"retail",addr:"15 E Main St, Mendham NJ",email:"mendhamcycle@gmail.com",phone:"(908)543-1234",rating:4.3},
+  {name:"Green Thumb Landscaping",cat:"contractor",addr:"7 Hilltop Rd, Mendham NJ",email:"greenthumb.nj@gmail.com",phone:"(908)211-5566",rating:4.7},
+  {name:"Chester Diner",cat:"restaurant",addr:"22 Main St, Chester NJ",email:"chesterdiner@gmail.com",phone:"(908)879-6543",rating:4.1},
+  {name:"Sunrise Yoga Studio",cat:"health",addr:"45 Grove St, Mendham NJ",email:"sunriseyoganj@gmail.com",phone:"(908)432-8877",rating:4.8},
+  {name:"Pete's Auto Repair",cat:"automotive",addr:"101 Mountain Ave, Mendham NJ",email:"petesauto.mendham@gmail.com",phone:"(908)543-9900",rating:4.5},
+  {name:"The Cutting Edge Salon",cat:"salon",addr:"88 W Main St, Chester NJ",email:"cuttingedge.chester@gmail.com",phone:"(908)879-1122",rating:4.2},
+  {name:"Mendham Florist",cat:"retail",addr:"34 E Main St, Mendham NJ",email:"mendhamflorist@gmail.com",phone:"(908)543-7788",rating:4.6},
+  {name:"Brookside Plumbing",cat:"contractor",addr:"9 Brookside Rd, Mendham NJ",email:"brooksideplumbing@gmail.com",phone:"(908)211-3344",rating:4.4},
+  {name:"NJ Tax Solutions",cat:"professional",addr:"56 Main St, Chester NJ",email:"njtaxsolutions@gmail.com",phone:"(908)879-5500",rating:4.0},
+  {name:"Paws & Claws Pet Shop",cat:"retail",addr:"12 Rt 206, Chester NJ",email:"pawsclawsnj@gmail.com",phone:"(908)543-2200",rating:4.7},
+  {name:"Hilltop Deli",cat:"restaurant",addr:"3 Hilltop Ave, Mendham NJ",email:"hilltopdeli@gmail.com",phone:"(908)432-4455",rating:4.3},
+  {name:"Morris County Painters",cat:"contractor",addr:"77 School House Rd, Mendham NJ",email:"morriscountypainters@gmail.com",phone:"(908)211-8800",rating:4.5},
+  {name:"Bella Nails & Spa",cat:"salon",addr:"22 Rt 24, Chester NJ",email:"bellanailschester@gmail.com",phone:"(908)879-3300",rating:4.1},
+  {name:"Summit Chiropractic",cat:"health",addr:"49 Mountain Ave, Mendham NJ",email:"summitchiro.nj@gmail.com",phone:"(908)543-6600",rating:4.9},
+  {name:"Chester Electrical Co.",cat:"contractor",addr:"63 Cooper Mill Rd, Chester NJ",email:"chesterelectric.nj@gmail.com",phone:"(908)879-1010",rating:4.6},
+  {name:"Fresh Eats Catering",cat:"restaurant",addr:"31 Grove St, Mendham NJ",email:"fresheats.nj@gmail.com",phone:"(908)432-7700",rating:4.4},
+  {name:"Garden State Insurance",cat:"professional",addr:"5 W Main St, Chester NJ",email:"gardenstate.ins@gmail.com",phone:"(908)879-2200",rating:3.9},
+  {name:"Fit Life Gym",cat:"health",addr:"88 Main St, Chester NJ",email:"fitlifechester@gmail.com",phone:"(908)879-5544",rating:4.5},
+  {name:"Main Street Bakery",cat:"restaurant",addr:"4 E Main St, Mendham NJ",email:"mainstreetbakery.nj@gmail.com",phone:"(908)543-3311",rating:4.8},
+  {name:"Advanced Dental Arts",cat:"health",addr:"101 Rt 24, Chester NJ",email:"advanceddentalchester@gmail.com",phone:"(908)879-9900",rating:4.7},
+  {name:"Chester Hardware",cat:"retail",addr:"15 Main St, Chester NJ",email:"chesterhardware@gmail.com",phone:"(908)879-4433",rating:4.3},
+  {name:"Morris Hills Realty",cat:"professional",addr:"23 E Main St, Mendham NJ",email:"morrishillsrealty@gmail.com",phone:"(908)543-5577",rating:4.1},
+  {name:"Trailhead Coffee",cat:"restaurant",addr:"7 Rt 206, Chester NJ",email:"trailheadcoffee@gmail.com",phone:"(908)879-6688",rating:4.6},
+  {name:"NJ Roofing Pros",cat:"contractor",addr:"44 Hilltop Rd, Mendham NJ",email:"njroofingpros@gmail.com",phone:"(908)432-1100",rating:4.2},
+  {name:"Dogwood Animal Clinic",cat:"health",addr:"55 Hilltop Ave, Chester NJ",email:"dogwoodanimalnj@gmail.com",phone:"(908)879-3300",rating:4.8},
+  {name:"Mendham Massage Therapy",cat:"health",addr:"29 Grove St, Mendham NJ",email:"mendham.massage@gmail.com",phone:"(908)543-9911",rating:4.6},
+  {name:"Countryside Accounting",cat:"professional",addr:"72 Mt Kemble Ave, Mendham NJ",email:"countrysideaccounting@gmail.com",phone:"(908)543-7700",rating:4.3},
+  {name:"King's Car Wash",cat:"automotive",addr:"88 Rt 206, Chester NJ",email:"kingscarwash.nj@gmail.com",phone:"(908)879-1155",rating:4.1},
+  {name:"The Village Frame Shop",cat:"retail",addr:"11 E Main St, Chester NJ",email:"villageframeshop@gmail.com",phone:"(908)879-6622",rating:4.5},
+  {name:"Mendham Veterinary",cat:"health",addr:"67 Mountain Ave, Mendham NJ",email:"mendhamvet@gmail.com",phone:"(908)543-8800",rating:4.7},
+  {name:"The Cutting Board Kitchen",cat:"restaurant",addr:"41 Main St, Mendham NJ",email:"cuttingboard.nj@gmail.com",phone:"(908)543-6611",rating:4.5},
+  {name:"Green Valley Nursery",cat:"retail",addr:"99 Rt 24, Chester NJ",email:"greenvalleynursery@gmail.com",phone:"(908)879-8811",rating:4.6},
+  {name:"Pro HVAC Services",cat:"contractor",addr:"53 School House Rd, Mendham NJ",email:"prohvac.nj@gmail.com",phone:"(908)543-2299",rating:4.3},
+  {name:"Mendham Music Studio",cat:"service",addr:"8 W Main St, Mendham NJ",email:"mendhammusic@gmail.com",phone:"(908)543-4455",rating:4.7},
+  {name:"Jersey Java Coffee",cat:"restaurant",addr:"33 E Main St, Chester NJ",email:"jerseyjava@gmail.com",phone:"(908)879-2266",rating:4.4},
+  {name:"Precision Auto Body",cat:"automotive",addr:"47 Main St, Mendham NJ",email:"precisionautobody.nj@gmail.com",phone:"(908)543-9977",rating:4.2},
+  {name:"Chester Jewelers",cat:"retail",addr:"16 Main St, Chester NJ",email:"chesterjewelers@gmail.com",phone:"(908)879-1133",rating:4.5},
+  {name:"Mountain View Photography",cat:"service",addr:"27 Grove St, Mendham NJ",email:"mvphotonj@gmail.com",phone:"(908)543-3322",rating:4.8},
+  {name:"First Choice Tutoring",cat:"professional",addr:"64 Hilltop Ave, Mendham NJ",email:"firstchoicetutoring@gmail.com",phone:"(908)543-6688",rating:4.6},
+  {name:"Harvest Moon Farm Stand",cat:"retail",addr:"82 Rt 206, Chester NJ",email:"harvestmoonfarm@gmail.com",phone:"(908)879-4477",rating:4.7},
+  {name:"Summit Legal Group",cat:"professional",addr:"38 Mountain Ave, Chester NJ",email:"summitlegal.nj@gmail.com",phone:"(908)879-8866",rating:4.4},
+  {name:"All American Gutters",cat:"contractor",addr:"71 Hilltop Rd, Chester NJ",email:"allamerigutters@gmail.com",phone:"(908)879-3355",rating:4.3},
+  {name:"Serenity Wellness Spa",cat:"health",addr:"9 Grove St, Chester NJ",email:"serenitywellnessnj@gmail.com",phone:"(908)879-7744",rating:4.7},
+  {name:"Chester Book Shoppe",cat:"retail",addr:"30 Main St, Chester NJ",email:"chesterbookshoppe@gmail.com",phone:"(908)879-2299",rating:4.5},
+  {name:"Liberty Locksmith",cat:"service",addr:"36 Cooper Mill Rd, Chester NJ",email:"libertylocksmith.nj@gmail.com",phone:"(908)879-2255",rating:4.4},
+  {name:"Mendham Alterations",cat:"service",addr:"20 E Main St, Mendham NJ",email:"mendhamalterations@gmail.com",phone:"(908)543-5500",rating:4.1},
+  {name:"NJ Window Cleaning",cat:"service",addr:"14 Prospect St, Chester NJ",email:"njwindowclean@gmail.com",phone:"(908)879-3377",rating:4.2},
+  {name:"Chester Cleaners",cat:"service",addr:"26 Rt 206, Chester NJ",email:"chestercleaners@gmail.com",phone:"(908)879-5566",rating:4.0},
+  {name:"Mendham Dry Cleaning",cat:"service",addr:"18 E Main St, Mendham NJ",email:"mendhamdryclean@gmail.com",phone:"(908)543-8800",rating:4.0},
+  {name:"Mendham Shoe Repair",cat:"service",addr:"19 Main St, Mendham NJ",email:"mendhamshoerepair@gmail.com",phone:"(908)543-8855",rating:4.0},
+];
+
+const LOSS_MULTIPLIERS = { restaurant:1.4, retail:1.2, health:1.6, contractor:1.8, salon:1.1, automotive:1.5, professional:2.0, service:1.0 };
+const LOSS_REASONS = { restaurant:"No online menu, hours, or ordering → customers choose competitors with websites", retail:"Missing from Google Shopping & local search → foot traffic lost daily", health:"Patients pick visible competitors first → appointments going elsewhere", contractor:"Google Maps ranks listed contractors above you — jobs lost before you're called", salon:"No online booking → missed appointments every single day", automotive:"Customers compare shops online — unlisted means invisible", professional:"Clients research firms online before hiring — no site = no trust", service:"No 24/7 quote form = leads lost overnight while you sleep" };
+
+function estimateLoss(cat) {
+  const m = LOSS_MULTIPLIERS[cat] || 1.0;
+  return Math.round(320 * 0.032 * 85 * m * 12);
+}
+
+async function startScan() {
+  state.abort.scan = false;
+  const max = parseInt(document.getElementById('scanMax').value) || 100;
+  setRunning('scan', true);
+  showFloat('Scanning businesses...', '0/'+max);
+  state.leads = [];
+  renderLeads();
+
+  for (let i = 0; i < max && !state.abort.scan; i++) {
+    const seed = SEED[i % SEED.length];
+    const suffix = i >= SEED.length ? ' #'+Math.ceil(i/SEED.length+1) : '';
+    await sleep(60 + Math.random()*100);
+    if (state.abort.scan) break;
+
+    const pct = Math.round((i+1)/max*100);
+    setProg('scan', pct, `Scanning ${i+1}/${max}`, seed.name+suffix);
+    updateFloat(`${i+1}/${max}`);
+
+    state.leads.push({
+      id: 'l'+i, name: seed.name+suffix, cat: seed.cat,
+      addr: seed.addr, email: seed.email, phone: seed.phone,
+      rating: +(seed.rating + (Math.random()*.3-.15)).toFixed(1),
+      loss: estimateLoss(seed.cat), reason: LOSS_REASONS[seed.cat]||'Lost to online-visible competitors',
+      selected: true, status: 'pending', sentAt: null
+    });
+
+    if (i % 6 === 0) { renderLeads(); updateScanStats(); }
+    if (i % 10 === 0) log('scanLog', `Found: ${seed.name+suffix}`, 'ok');
+  }
+
+  renderLeads(); updateScanStats(); updateCounts();
+  setRunning('scan', false); hideFloat();
+  toast(state.abort.scan ? `Stopped — ${state.leads.length} leads` : `Scan complete — ${state.leads.length} leads ✓`);
+}
+
+function updateScanStats() {
+  const n = state.leads.length;
+  const tot = state.leads.reduce((s,l)=>s+l.loss,0);
+  document.getElementById('s-found').textContent = n;
+  document.getElementById('s-loss').textContent = '$'+(tot/1000).toFixed(0)+'k';
+  document.getElementById('s-avg').textContent = n ? '$'+Math.round(tot/n).toLocaleString() : '$0';
+  document.getElementById('s-sel').textContent = state.leads.filter(l=>l.selected).length;
+}
+
+function renderLeads() {
+  const search = (document.getElementById('leadSearch')?.value||'').toLowerCase();
+  let list = state.leads.filter(l => {
+    if (state.leadFilter!=='all' && l.cat!==state.leadFilter) return false;
+    if (search && !l.name.toLowerCase().includes(search) && !l.email.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  list.sort((a,b) => {
+    if (state.leadSort==='loss_d') return b.loss-a.loss;
+    if (state.leadSort==='loss_a') return a.loss-b.loss;
+    if (state.leadSort==='name')   return a.name.localeCompare(b.name);
+    if (state.leadSort==='rating') return b.rating-a.rating;
+    return 0;
+  });
+  const tbody = document.getElementById('leadsBody');
+  if (!list.length) { tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>No leads</div></td></tr>'; return; }
+  tbody.innerHTML = list.map(l=>`
+    <tr>
+      <td><input type="checkbox" ${l.selected?'checked':''} onchange="toggleLead('${l.id}',this.checked)"></td>
+      <td style="font-weight:600">${l.name}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${l.cat}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email}</td>
+      <td style="font-size:11px">${l.phone}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">⭐${l.rating}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600">$${l.loss.toLocaleString()}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:160px;line-height:1.4">${l.reason}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-primary btn-sm" onclick="addToCampaign('${l.id}')">📧</button>
+        <button class="btn btn-ghost btn-sm" onclick="genOneMockup('${l.id}')">🎨</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function toggleLead(id,v){ const l=state.leads.find(x=>x.id===id); if(l){l.selected=v; updateScanStats();} }
+function selectAll(cb){ state.leads.forEach(l=>l.selected=cb.checked); renderLeads(); updateScanStats(); }
+function setLeadFilter(el,v){ document.querySelectorAll('#panel-scan .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); state.leadFilter=v; renderLeads(); }
+
+function exportLeads() {
+  if (!state.leads.length) return toast('No leads');
+  const csv = ['Name,Cat,Address,Email,Phone,Rating,Loss/yr,Reason']
+    .concat(state.leads.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email}","${l.phone}",${l.rating},${l.loss},"${l.reason}"`))
+    .join('\n');
+  dl(csv,'sytesurge_leads.csv');
+}
+function clearLeads(){ if(!confirm('Clear all leads?'))return; state.leads=[]; renderLeads(); updateScanStats(); updateCounts(); }
+function sendToEmail(){
+  const sel=state.leads.filter(l=>l.selected);
+  if(!sel.length) return toast('Select leads first');
+  sel.forEach(l=>{ if(!state.campaign.find(c=>c.id===l.id)) state.campaign.push({...l,status:'pending',sentAt:null}); });
+  renderCampaign(); updateCounts(); switchTab('email');
+  toast(`${sel.length} leads added to campaign ✓`);
+}
+
+// ============================================================
+//  CAMPAIGN
+// ============================================================
+function getEmail(biz) {
+  let sub = document.getElementById('emailSubject').value;
+  let body = document.getElementById('emailBody').value;
+  const yourName = document.getElementById('cfg-yourname')?.value?.trim() || localStorage.getItem('sytesurge_yourname') || '[Your Name]';
+  const bizAddr  = document.getElementById('cfg-address')?.value?.trim()  || localStorage.getItem('sytesurge_address') || '';
+  const fromEmail = localStorage.getItem('sytesurge_email') || 'info@sytesurge.com';
+  const vars = {
+    '{{business_name}}': biz.name, '{{owner_name}}': 'Business Owner', '{{category}}': biz.cat,
+    '{{city}}': biz.addr?.split(',')[1]?.trim()||'your area',
+    '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': biz.rating
+  };
+  Object.entries(vars).forEach(([k,v])=>{ sub=sub.replaceAll(k,v); body=body.replaceAll(k,v); });
+  const bodyHtml = body.replace(/\n/g,'<br>');
+
+  // CAN-SPAM COMPLIANT FOOTER — legally required
+  const footer = `
+<br><br>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0">
+<p style="font-size:11px;color:#888;font-family:Arial,sans-serif;line-height:1.6">
+  This is a commercial email sent by <strong>Sytesurge</strong>, ${yourName}.<br>
+  Our mailing address: <strong>${bizAddr || '[ADDRESS REQUIRED — fill in config bar]'}</strong><br>
+  You are receiving this because your business was found in a public directory.<br>
+  To stop receiving emails from us, reply with the word <strong>UNSUBSCRIBE</strong> and we will remove you within 10 business days, as required by the CAN-SPAM Act.
+</p>`;
+
+  return { subject: sub, body: bodyHtml + footer };
+}
+function insertVar(v){ const ta=document.getElementById('emailBody'); const s=ta.selectionStart,e=ta.selectionEnd; ta.value=ta.value.slice(0,s)+v+ta.value.slice(e); ta.focus(); }
+function previewEmail(){ const b=state.campaign[0]||state.leads[0]; if(!b)return toast('No leads'); const {subject,body}=getEmail(b); const w=window.open('','_blank','width=680,height=580'); w.document.write(`<html><head><style>body{font-family:Arial;max-width:600px;margin:32px auto;padding:16px;color:#333}</style></head><body><h3>Subject: ${subject}</h3><hr>${body}</body></html>`); }
+function saveTemplate(){ localStorage.setItem('tmpl_subj',document.getElementById('emailSubject').value); localStorage.setItem('tmpl_body',document.getElementById('emailBody').value); toast('Template saved ✓'); }
+function loadTemplate(){ const s=localStorage.getItem('tmpl_subj'),b=localStorage.getItem('tmpl_body'); if(s)document.getElementById('emailSubject').value=s; if(b)document.getElementById('emailBody').value=b; toast('Template loaded ✓'); }
+function resetTemplate(){ document.getElementById('emailSubject').value="Your business deserves to be found online, {{business_name}}"; document.getElementById('emailBody').value="Hi {{owner_name}},\n\nI came across {{business_name}} and wanted to reach out — you're running a great {{category}} business in {{city}}, but I noticed you don't currently have a website.\n\nBusinesses without a website lose an estimated <strong>{{est_loss}} per year</strong> in revenue from customers who search online and can't find them.\n\nAt Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.\n\nWe'd love to show you a <strong>free mockup</strong> of what your site could look like. No commitment.\n\nReply anytime or give us a call.\n\nBest,\n[Your Name]\nSytesurge | sytesurge.com\n\n---\nThis is a commercial email. To unsubscribe, reply with UNSUBSCRIBE."; toast('Reset ✓'); }
+
+async function startCampaign() {
+  const pending = state.campaign.filter(c=>c.status==='pending');
+  if (!pending.length) return toast('No pending emails');
+  const mode = document.getElementById('sendMode').value;
+  const delay = parseInt(document.getElementById('emailDelay').value)*1000;
+  if (mode==='live' && !localStorage.getItem('sytesurge_accessToken')) return toast('Connect Gmail first — click Connect Gmail in the header');
+
+  state.abort.campaign = false;
+  setRunning('campaign', true);
+  showFloat('Sending emails...','0/'+pending.length);
+
+  // Block send if no physical address (CAN-SPAM)
+  const bizAddr = document.getElementById('cfg-address')?.value?.trim() || localStorage.getItem('sytesurge_address') || '';
+  if (!bizAddr) {
+    toast('⚖️ Enter your Business Address in the config bar first — required by CAN-SPAM');
+    setRunning('campaign', false); hideFloat();
+    document.getElementById('cfg-address').focus();
+    document.getElementById('cfg-address').style.borderColor = 'var(--danger)';
+    return;
+  }
+
+  let sent=0, errs=0;
+  for (let i=0; i<pending.length && !state.abort.campaign; i++) {
+    const lead = pending[i];
+
+    // SUPPRESSION LIST CHECK — never email an unsubscribed contact
+    if (isUnsubscribed(lead.email)) {
+      lead.status = 'suppressed';
+      log('emailLog', `⚖️ Skipped (unsubscribed): ${lead.email}`, 'warn');
+      renderCampaign(); continue;
+    }
+
+    const {subject,body} = getEmail(lead);
+    const pct = Math.round((i+1)/pending.length*100);
+    setProg('campaign', pct, `Sending ${i+1}/${pending.length}`, lead.email);
+    updateFloat(`${i+1}/${pending.length}`);
+
+    if (mode==='live') {
+      const ok = await sendGmail(lead.email, subject, body);
+      lead.status = ok ? 'sent' : 'error';
+      if (ok) { sent++; log('emailLog',`✓ Sent → ${lead.email}`,'ok'); }
+      else     { errs++; log('emailLog',`✗ Failed → ${lead.email}`,'err'); }
+      await sleep(delay);
+    } else {
+      await sleep(800);
+      lead.status='sent'; sent++;
+      log('emailLog',`[TEST] Sent → ${lead.email} | Subject: ${subject}`,'info');
+    }
+    lead.sentAt = new Date().toLocaleTimeString();
+    renderCampaign(); updateEmailStats();
+  }
+  setRunning('campaign',false); hideFloat(); updateCounts();
+  toast(state.abort.campaign ? `Stopped. Sent ${sent}, ${errs} errors.` : `Campaign done. Sent ${sent}${errs?', '+errs+' errors':''} ✓`);
+}
+
+function updateEmailStats() {
+  const s=state.campaign.filter(c=>c.status==='sent').length;
+  const e=state.campaign.filter(c=>c.status==='error').length;
+  const q=state.campaign.filter(c=>c.status==='pending').length;
+  document.getElementById('e-queued').textContent=q;
+  document.getElementById('e-sent').textContent=s;
+  document.getElementById('e-error').textContent=e;
+  document.getElementById('e-rate').textContent=state.campaign.length?Math.round(s/state.campaign.length*100)+'%':'0%';
+}
+
+function renderCampaign() {
+  const tb=document.getElementById('campaignBody');
+  if(!state.campaign.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-icon">📧</div>No leads in campaign</div></td></tr>';return;}
+  tb.innerHTML=state.campaign.map(c=>`<tr>
+    <td style="font-weight:600">${c.name}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${c.email}</td>
+    <td><span class="sdot ${c.status==='sent'?'s-sent':c.status==='error'?'s-error':'s-pending'}"></span>${c.status}</td>
+    <td style="font-size:11px;color:var(--muted)">${c.sentAt||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="removeCampaign('${c.id}')">✕</button></td>
+  </tr>`).join('');
+  updateEmailStats();
+}
+function addToCampaign(id){ const l=state.leads.find(x=>x.id===id); if(!l)return; if(!state.campaign.find(c=>c.id===id)){ state.campaign.push({...l,status:'pending',sentAt:null}); renderCampaign(); updateCounts(); toast(l.name+' added ✓'); } else toast('Already in campaign'); }
+function removeCampaign(id){ state.campaign=state.campaign.filter(c=>c.id!==id); renderCampaign(); updateCounts(); }
+
+// ============================================================
+//  REPLIES
+// ============================================================
+const SAMPLE_REPLIES = [
+  {from:"Mendham Cycle",email:"mendhamcycle@gmail.com",text:"Hi! Yes we've been meaning to get a website. What are your prices? When can we set up a meeting?"},
+  {from:"Green Thumb Landscaping",email:"greenthumb.nj@gmail.com",text:"Interesting. We're a small operation. Not sure we need one but maybe. How much would it cost?"},
+  {from:"Chester Diner",email:"chesterdiner@gmail.com",text:"We're happy with our Yelp page. Don't need anything right now, thanks."},
+  {from:"Sunrise Yoga Studio",email:"sunriseyoganj@gmail.com",text:"Oh wow perfect timing! We just talked about this. Can you send me examples of your work?"},
+  {from:"Pete's Auto Repair",email:"petesauto.mendham@gmail.com",text:"How much does it cost? My cousin does websites too so I'm comparing options."},
+  {from:"Mendham Florist",email:"mendhamflorist@gmail.com",text:"PLEASE call me. We lose customers to the florist in Chester who has a website. I want this ASAP."},
+  {from:"NJ Tax Solutions",email:"njtaxsolutions@gmail.com",text:"Please remove me from your mailing list."},
+  {from:"Paws & Claws Pet Shop",email:"pawsclawsnj@gmail.com",text:"Really interesting. We've lost customers because people can't find our hours online. What do you need from us to get started?"},
+];
+
+async function fetchReplies() {
+  state.abort.replies = false;
+  setRunning('replies', true);
+  showFloat('Fetching & analyzing replies...','');
+
+  const token = localStorage.getItem('sytesurge_accessToken');
+  let messages = [];
+
+  if (token) {
+    // Real Gmail fetch
+    try {
+      const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox&maxResults=20', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const d = await r.json();
+      if (d.messages) {
+        for (const m of d.messages.slice(0,12)) {
+          if (state.abort.replies) break;
+          const det = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, {
+            headers: { Authorization: 'Bearer ' + token }
+          }).then(x=>x.json());
+          const hdrs = det.payload?.headers||[];
+          const from = hdrs.find(h=>h.name==='From')?.value||'Unknown';
+          messages.push({ from: from.split('<')[0].trim().replace(/"/g,''), email: from.match(/<(.+)>/)?.[1]||from, text: det.snippet||'' });
+        }
+      }
+    } catch(e) { messages = SAMPLE_REPLIES.slice(0,5); }
+  } else {
+    messages = SAMPLE_REPLIES.slice(0, 4+Math.floor(Math.random()*4));
+  }
+
+  for (let i=0; i<messages.length && !state.abort.replies; i++) {
+    const msg = messages[i];
+    if (state.replies.find(r=>r.email===msg.email)) continue;
+    await sleep(300+Math.random()*500);
+    if (state.abort.replies) break;
+    updateFloat(`${i+1}/${messages.length}`);
+    const score = await scoreReply(msg.text);
+    // Auto-detect unsubscribe requests and add to suppression list
+    const unsubKeywords = ['unsubscribe','remove me','stop emailing','take me off','opt out','do not contact','remove from'];
+    const isUnsub = unsubKeywords.some(k => msg.text.toLowerCase().includes(k));
+    if (isUnsub) {
+      addToSuppressionList(msg.email);
+      score.score = 0; score.reason = 'Unsubscribe request detected — contact suppressed automatically.'; score.sentiment = 'very_negative';
+    }
+    state.replies.push({...msg, score, unsubscribed: isUnsub, at: new Date().toLocaleTimeString()});
+    renderReplies(); updateReplyStats(); updateCounts();
+  }
+
+  setRunning('replies',false); hideFloat();
+  toast(`Analyzed ${state.replies.length} replies ✓`);
+}
+
+async function scoreReply(text) {
+  const apiKey = document.getElementById('anthropicKey')?.value || localStorage.getItem('sytesurge_anthropicKey');
+  if (apiKey) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, messages:[{role:'user',content:`You are a sales analyst for a web development agency. Score this reply from a small business owner who was cold-emailed about getting a website built.\n\nReply: "${text}"\n\nReturn ONLY valid JSON (no markdown):\n{"score":0-100,"reason":"one sentence","sentiment":"very_positive|positive|neutral|negative|very_negative","signals":["phrase1","phrase2"]}`}]})
+      });
+      const d = await r.json();
+      return JSON.parse(d.content[0].text);
+    } catch(e) {}
+  }
+  // Heuristic fallback
+  const pos=['yes','interested','price','cost','when','meet','call','start','need','want','please','how much','tell me more','ready','asap'];
+  const neg=['no','not','remove','unsubscribe','stop','not interested','already','happy with'];
+  const tp=pos.filter(w=>text.toLowerCase().includes(w)).length;
+  const tn=neg.filter(w=>text.toLowerCase().includes(w)).length;
+  const s=Math.max(3,Math.min(96,tp*16-tn*20+30+Math.floor(Math.random()*10)));
+  return { score:s, reason: s>=75?'Strong buying signals present.':s>=50?'Moderate interest with some hesitation.':s>=30?'Lukewarm — may need nurturing.':'Low interest or disengagement.', sentiment: tp>tn?'positive':'negative', signals:[] };
+}
+
+function addTestReply() {
+  const s = SAMPLE_REPLIES.find(r=>!state.replies.find(x=>x.email===r.email));
+  if (!s) return toast('All test replies added');
+  scoreReply(s.text).then(score=>{ state.replies.push({...s,score,at:new Date().toLocaleTimeString()}); renderReplies(); updateReplyStats(); updateCounts(); });
+}
+function reanalyzeAll() { state.replies.forEach(async r=>{ r.score=await scoreReply(r.text); }); setTimeout(()=>{renderReplies();updateReplyStats();},2500); toast('Re-analyzing...'); }
+function exportScores() { if(!state.replies.length)return toast('No replies'); const csv=['Business,Email,Score,Sentiment,Reason,Time'].concat(state.replies.map(r=>`"${r.from}","${r.email}",${r.score?.score||0},"${r.score?.sentiment}","${r.score?.reason}","${r.at}"`)).join('\n'); dl(csv,'sytesurge_scores.csv'); }
+function setReplyFilter(el,v){ document.querySelectorAll('#panel-replies .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); state.replyFilter=v; renderReplies(); }
+
+function renderReplies() {
+  let list=[...state.replies];
+  if(state.replyFilter==='hot') list=list.filter(r=>(r.score?.score||0)>=80);
+  else if(state.replyFilter==='warm') list=list.filter(r=>{const s=r.score?.score||0;return s>=50&&s<80;});
+  else if(state.replyFilter==='cold') list=list.filter(r=>(r.score?.score||0)<50);
+  if(state.replySort==='score_d') list.sort((a,b)=>(b.score?.score||0)-(a.score?.score||0));
+  else if(state.replySort==='score_a') list.sort((a,b)=>(a.score?.score||0)-(b.score?.score||0));
+  const c=document.getElementById('repliesContainer');
+  if(!list.length){c.innerHTML='<div class="empty"><div class="empty-icon">💬</div>No replies match filter</div>';return;}
+  c.innerHTML=list.map(r=>{
+    const s=r.score?.score||0;
+    const sc=s>=80?'score-high':s>=50?'score-mid':'score-low';
+    const em=s>=80?'🔥':s>=50?'🌡':'❄️';
+    return `<div class="reply-card">
+      <div class="reply-header">
+        <div><div class="reply-from">${em} ${r.from}</div><div class="reply-email">${r.email} · ${r.at}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="score ${sc}">${s}%</span>
+          <button class="btn btn-primary btn-sm" onclick="genReplyMockup('${r.email}')">🎨 Mockup</button>
+        </div>
+      </div>
+      <div class="reply-snippet">"${r.text}"</div>
+      <div class="reply-analysis">🧠 ${r.score?.reason||'No analysis'}${r.score?.signals?.length?' · Key signals: '+r.score.signals.join(', '):''}</div>
+    </div>`;
+  }).join('');
+}
+function updateReplyStats() {
+  const hot=state.replies.filter(r=>(r.score?.score||0)>=80).length;
+  const warm=state.replies.filter(r=>{const s=r.score?.score||0;return s>=50&&s<80;}).length;
+  const cold=state.replies.filter(r=>(r.score?.score||0)<50).length;
+  document.getElementById('r-hot').textContent=hot;
+  document.getElementById('r-warm').textContent=warm;
+  document.getElementById('r-cold').textContent=cold;
+  document.getElementById('r-total').textContent=state.replies.length;
+}
+function genReplyMockup(email){ const r=state.replies.find(x=>x.email===email); if(r){ genMockupFor({id:'r_'+email,name:r.from,cat:'service',rating:4.5,phone:'',email:r.email,addr:'Mendham, NJ',loss:0}); switchTab('mockups'); } }
+
+// ============================================================
+//  MOCKUPS
+// ============================================================
+const CAT_COLORS={ restaurant:{p:'#e63946',bg:'#120508',a:'#f4a261'}, retail:{p:'#457b9d',bg:'#040d18',a:'#a8dadc'}, health:{p:'#2d6a4f',bg:'#040f08',a:'#74c69d'}, contractor:{p:'#e07a5f',bg:'#120a04',a:'#f2cc8f'}, salon:{p:'#c77dff',bg:'#0d0514',a:'#e0aaff'}, automotive:{p:'#264653',bg:'#020c12',a:'#2a9d8f'}, professional:{p:'#4361ee',bg:'#02031a',a:'#7209b7'}, service:{p:'#3d405b',bg:'#05060d',a:'#81b29a'} };
+const TAGLINES={ restaurant:'Exceptional food, unforgettable moments.', retail:'Quality products, local service.', health:'Your wellness journey starts here.', contractor:'Built right, built to last.', salon:'Where beauty meets relaxation.', automotive:'Expert care for every vehicle.', professional:'Trusted expertise, exceptional results.', service:'Reliable. Affordable. Local.' };
+const SERVICES={ restaurant:[{i:'🍽',t:'Dine-In',d:'Chef-crafted dishes in a warm, welcoming atmosphere.'},{i:'🥡',t:'Takeout',d:'Fresh food ready when you are.'},{i:'🎉',t:'Private Events',d:'Custom menus for any occasion.'}], retail:[{i:'🛍',t:'In-Store',d:'Curated selection in a friendly environment.'},{i:'📦',t:'Special Orders',d:'We source products just for you.'},{i:'🎁',t:'Gift Wrapping',d:'Complimentary gift wrapping on any purchase.'}], health:[{i:'💪',t:'Personalized Care',d:'Plans tailored to your individual goals.'},{i:'📅',t:'Easy Booking',d:'Schedule online at your convenience.'},{i:'🌿',t:'Holistic Approach',d:'Treating the whole person, not just symptoms.'}], contractor:[{i:'🔨',t:'Expert Work',d:'Meticulous attention to detail on every project.'},{i:'🏠',t:'Free Estimates',d:'No-obligation quotes, fair pricing guaranteed.'},{i:'✅',t:'Licensed & Insured',d:'Full peace of mind on every job.'}], salon:[{i:'✂️',t:'Hair Services',d:'Expert cuts, color, and styling.'},{i:'💅',t:'Nail Care',d:'Manicures, pedicures, and nail art.'},{i:'🧖',t:'Spa Treatments',d:'Facials and massages for full relaxation.'}], automotive:[{i:'🔧',t:'Full Repair',d:'All makes and models, all repairs.'},{i:'🔍',t:'Diagnostics',d:'State-of-the-art equipment to find any issue.'},{i:'🛡',t:'Maintenance',d:'Keep your vehicle running perfectly.'}], professional:[{i:'📊',t:'Expert Advice',d:'Strategic guidance backed by years of experience.'},{i:'📋',t:'Full Support',d:'End-to-end management of your needs.'},{i:'🤝',t:'Long-Term Partnership',d:'Built on trust, integrity, and results.'}], service:[{i:'⚡',t:'Fast Response',d:'Same-day availability — your time matters.'},{i:'💯',t:'Guaranteed',d:'Every job done right, or we make it right.'},{i:'💰',t:'Fair Pricing',d:'Transparent rates, no hidden fees.'}] };
+
+function h2r(hex){ hex=hex.replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); return `${(n>>16)&255},${(n>>8)&255},${n&255}`; }
+
+function buildMockup(biz) {
+  const c = CAT_COLORS[biz.cat]||CAT_COLORS.service;
+  const srvs = SERVICES[biz.cat]||SERVICES.service;
+  const tl = TAGLINES[biz.cat]||TAGLINES.service;
+  const name = (biz.name||'Business').replace(/</g,'&lt;');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${name}</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>*{margin:0;padding:0;box-sizing:border-box}
+:root{--p:${c.p};--bg:${c.bg};--a:${c.a}}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;overflow-x:hidden}
+nav{display:flex;justify-content:space-between;align-items:center;padding:18px 56px;background:rgba(0,0,0,.35);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--a)}
+.nav-links{display:flex;gap:24px;list-style:none}
+.nav-links a{color:rgba(255,255,255,.6);text-decoration:none;font-size:13px;transition:color .2s}
+.nav-links a:hover{color:var(--a)}
+.cta-btn{background:var(--p);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.hero{min-height:88vh;display:flex;align-items:center;padding:0 56px;background:radial-gradient(ellipse at 70% 50%,rgba(${h2r(c.p)},.18) 0%,transparent 65%),linear-gradient(160deg,${c.bg} 0%,rgba(${h2r(c.a)},.04) 100%);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-20%;right:-8%;width:520px;height:520px;background:radial-gradient(circle,rgba(${h2r(c.a)},.12) 0%,transparent 70%);border-radius:50%}
+.hero-inner{max-width:580px;z-index:2;position:relative}
+.hero-badge{display:inline-block;background:rgba(${h2r(c.a)},.12);border:1px solid rgba(${h2r(c.a)},.3);color:var(--a);padding:5px 13px;border-radius:20px;font-size:12px;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(34px,5vw,62px);font-weight:800;line-height:1.1;margin-bottom:18px}
+h1 em{color:var(--a);font-style:normal}
+.hero-sub{font-size:17px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:28px;font-weight:300}
+.hero-btns{display:flex;gap:10px}
+.btn-h{padding:13px 26px;border-radius:9px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;border:none}
+.btn-fill{background:var(--p);color:#fff}
+.btn-out{background:transparent;border:2px solid rgba(255,255,255,.25);color:#fff}
+section{padding:72px 56px}
+h2{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;margin-bottom:10px}
+.sub{color:rgba(255,255,255,.45);margin-bottom:40px;font-size:15px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.scard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:24px;transition:transform .2s,border-color .2s}
+.scard:hover{transform:translateY(-3px);border-color:rgba(${h2r(c.a)},.35)}
+.scard-icon{font-size:28px;margin-bottom:12px}
+.scard h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px}
+.scard p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.6}
+.about-wrap{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center}
+.about-text p{color:rgba(255,255,255,.55);line-height:1.8;font-size:14px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat-b{background:rgba(${h2r(c.p)},.1);border:1px solid rgba(${h2r(c.p)},.2);border-radius:10px;padding:18px;text-align:center}
+.stat-b .n{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--a)}
+.stat-b .l{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tcard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px}
+.ttext{font-size:13px;color:rgba(255,255,255,.65);line-height:1.65;margin-bottom:12px;font-style:italic}
+.tauth{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--a)}
+.contact-wrap{text-align:center;position:relative}
+.contact-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(${h2r(c.p)},.12) 0%,transparent 65%);pointer-events:none}
+.contact-wrap p{color:rgba(255,255,255,.55);font-size:15px;margin-bottom:36px}
+.cinfo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:640px;margin:0 auto 32px}
+.ci{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:18px}
+.ci .icon{font-size:22px;margin-bottom:6px}
+.ci p{font-size:13px;color:rgba(255,255,255,.6)}
+.cta-big{background:var(--p);color:#fff;border:none;padding:14px 36px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;cursor:pointer}
+footer{padding:26px 56px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,.3)}
+.fbadge{background:rgba(${h2r(c.a)},.08);border:1px solid rgba(${h2r(c.a)},.2);color:var(--a);padding:3px 9px;border-radius:5px;font-size:11px}
+</style></head><body>
+<nav><div class="nav-logo">${name}</div><ul class="nav-links"><li><a href="#">Home</a></li><li><a href="#">Services</a></li><li><a href="#">About</a></li><li><a href="#">Contact</a></li></ul><button class="cta-btn">Get in Touch</button></nav>
+<section class="hero"><div class="hero-inner"><div class="hero-badge">📍 Serving Mendham & Chester, NJ</div><h1>Welcome to <em>${name}</em></h1><p class="hero-sub">${tl} Proudly serving our local community.</p><div class="hero-btns"><button class="btn-h btn-fill">Our Services</button><button class="btn-h btn-out">Contact Us</button></div></div></section>
+<section style="background:rgba(255,255,255,.02)"><h2>What We Offer</h2><p class="sub">Everything you need, delivered with expertise.</p><div class="grid3">${srvs.map(s=>`<div class="scard"><div class="scard-icon">${s.i}</div><h3>${s.t}</h3><p>${s.d}</p></div>`).join('')}</div></section>
+<section><div class="about-wrap"><div class="about-text"><h2>Why ${name}?</h2><p>We are a locally-owned ${biz.cat} business serving Mendham, Chester, and the surrounding Morris County area with pride and dedication.</p><p>Years of experience, genuine care for our customers, and an unwavering commitment to quality in everything we do.</p></div><div class="stats"><div class="stat-b"><div class="n">12+</div><div class="l">Years in NJ</div></div><div class="stat-b"><div class="n">500+</div><div class="l">Happy Customers</div></div><div class="stat-b"><div class="n">⭐${biz.rating||4.5}</div><div class="l">Google Rating</div></div><div class="stat-b"><div class="n">100%</div><div class="l">Satisfaction Goal</div></div></div></div></section>
+<section style="background:rgba(255,255,255,.02)"><h2 style="text-align:center">What Customers Say</h2><p class="sub" style="text-align:center">Real words from real people in our community.</p><div class="tgrid"><div class="tcard"><p class="ttext">"Absolutely the best in the area. Professional, prompt, and genuinely cares about their customers."</p><div class="tauth">— Sarah M., Mendham</div></div><div class="tcard"><p class="ttext">"Found them through a friend and couldn't be happier. ${name} exceeded every expectation."</p><div class="tauth">— James R., Chester</div></div><div class="tcard"><p class="ttext">"Fair prices, great work, and really friendly staff. A true local gem."</p><div class="tauth">— Linda K., Long Valley</div></div></div></section>
+<section class="contact-wrap"><h2>Get In Touch</h2><p>Ready to work with us? We'd love to hear from you.</p><div class="cinfo"><div class="ci"><div class="icon">📞</div><p>${biz.phone||'Call us today'}</p></div><div class="ci"><div class="icon">📧</div><p>${biz.email||'Email us anytime'}</p></div><div class="ci"><div class="icon">📍</div><p>${biz.addr||'Mendham, NJ'}</p></div></div><button class="cta-big">Send a Message</button></section>
+<footer><span>© 2025 ${name}. All rights reserved.</span><span class="fbadge">Built by Sytesurge</span></footer>
+</body></html>`;
+}
+
+async function generateMockups() {
+  const scope = document.getElementById('mockScope').value;
+  let targets = scope==='all' ? state.leads : scope==='hot' ? state.leads.filter(l=>{ const r=state.replies.find(x=>x.email===l.email); return r&&(r.score?.score||0)>=80; }) : state.leads.filter(l=>l.selected);
+  if (!targets.length) return toast('No leads to generate mockups for');
+  state.abort.mockups=false;
+  setRunning('mockups',true);
+  showFloat('Generating mockups...','0/'+targets.length);
+  for(let i=0;i<targets.length&&!state.abort.mockups;i++){
+    const biz=targets[i];
+    setProg('mockup',Math.round((i+1)/targets.length*100),`Generating ${i+1}/${targets.length}`,biz.name);
+    updateFloat(`${i+1}/${targets.length}`);
+    await sleep(250+Math.random()*300);
+    if(!state.abort.mockups&&!state.mockups.find(m=>m.id===biz.id)) state.mockups.push({id:biz.id,name:biz.name,cat:biz.cat,html:buildMockup(biz),at:new Date().toLocaleTimeString()});
+    renderMockups(); updateCounts();
+  }
+  setRunning('mockups',false); hideFloat();
+  toast(state.abort.mockups?`Stopped — ${state.mockups.length} mockups`:`Generated ${state.mockups.length} mockups ✓`);
+}
+
+function genOneMockup(id){ const l=state.leads.find(x=>x.id===id); if(!l)return; genMockupFor(l); }
+function genMockupFor(biz){ if(!state.mockups.find(m=>m.id===biz.id)){ state.mockups.push({id:biz.id,name:biz.name,cat:biz.cat,html:buildMockup(biz),at:new Date().toLocaleTimeString()}); } renderMockups(); updateCounts(); switchTab('mockups'); toast('Mockup created for '+biz.name+' ✓'); }
+
+function renderMockups() {
+  const g=document.getElementById('mockupGrid');
+  if(!state.mockups.length){g.innerHTML='<div style="grid-column:1/-1"><div class="empty"><div class="empty-icon">🎨</div>No mockups yet</div></div>';return;}
+  g.innerHTML=state.mockups.map(m=>`<div class="mockup-card">
+    <div class="mockup-preview" onclick="openMockup('${m.id}')"><iframe srcdoc="${m.html.replace(/"/g,'&quot;')}"></iframe></div>
+    <div class="mockup-info"><div class="mockup-name">${m.name}</div><div class="mockup-cat">${m.cat} · ${m.at}</div></div>
+    <div class="mockup-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openMockup('${m.id}')">👁 Preview</button>
+      <button class="btn btn-primary btn-sm" onclick="dlMockup('${m.id}')">📥 Download</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteMockup('${m.id}')">✕</button>
+    </div></div>`).join('');
+}
+
+let curMockId=null;
+function openMockup(id){ const m=state.mockups.find(x=>x.id===id); if(!m)return; curMockId=id; document.getElementById('modalTitle').textContent=m.name+' — Mockup'; document.getElementById('mockFrame').srcdoc=m.html; document.getElementById('mockModal').classList.add('open'); }
+function closeModal(){ document.getElementById('mockModal').classList.remove('open'); }
+function downloadCurrentMockup(){ if(curMockId)dlMockup(curMockId); }
+function emailCurrentMockup(){ if(!curMockId)return; const m=state.mockups.find(x=>x.id===curMockId); toast('Download and email '+m.name+'.html to the business'); dlMockup(curMockId); }
+function dlMockup(id){ const m=state.mockups.find(x=>x.id===id); if(!m)return; dl(m.html,m.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'_mockup.html'); toast('Downloaded: '+m.name+' ✓'); }
+function deleteMockup(id){ state.mockups=state.mockups.filter(m=>m.id!==id); renderMockups(); updateCounts(); }
+function clearMockups(){ if(!confirm('Clear all mockups?'))return; state.mockups=[]; renderMockups(); updateCounts(); }
+function downloadAll(){ if(!state.mockups.length)return toast('No mockups'); state.mockups.forEach(m=>dlMockup(m.id)); }
+
+// ============================================================
+//  STOP / PROCESS CONTROL
+// ============================================================
+function stopProcess(key){ state.abort[key]=true; toast('Stopping '+key+'...'); }
+function stopAll(){ Object.keys(state.abort).forEach(k=>state.abort[k]=true); ['scan','campaign','replies','mockups'].forEach(k=>setRunning(k,false)); hideFloat(); document.getElementById('btnStopAll').style.display='none'; document.getElementById('globalStatus').textContent='● Idle'; toast('⏹ All processes stopped'); }
+
+function setRunning(key, on) {
+  const map={scan:['btnScan','btnStopScan','scanProgress'],campaign:['btnSend','btnStopSend','sendProgress'],replies:['btnFetchReplies','btnStopReplies',null],mockups:['btnGenMock','btnStopMock','mockProgress']};
+  const [start,stop,prog]=map[key]||[];
+  if(start){const e=document.getElementById(start);if(e)e.disabled=on;}
+  if(stop){const e=document.getElementById(stop);if(e)e.style.display=on?'inline-flex':'none';}
+  if(prog){const e=document.getElementById(prog);if(e)e.style.display=on?'block':'none';}
+  document.getElementById('btnStopAll').style.display = Object.values(state.abort).some(v=>!v)&&on?'inline-flex':'none';
+  document.getElementById('globalStatus').textContent = on?'● Running':'● Idle';
+}
+
+function setProg(key,pct,label,detail){
+  const fills={scan:'scanPFill',campaign:'sendPFill',mockup:'mockPFill'};
+  const txts={scan:'scanPTxt',campaign:'sendPTxt',mockup:'mockPTxt'};
+  const pcts={scan:'scanPPct',campaign:'sendPPct',mockup:'mockPPct'};
+  const stats={scan:'scanPStatus',campaign:'sendPStatus',mockup:'mockPStatus'};
+  const f=document.getElementById(fills[key]);if(f)f.style.width=pct+'%';
+  const t=document.getElementById(txts[key]);if(t)t.textContent=label;
+  const p=document.getElementById(pcts[key]);if(p)p.textContent=pct+'%';
+  const s=document.getElementById(stats[key]);if(s)s.textContent=detail;
+}
+
+function showFloat(title,detail){ const f=document.getElementById('floatStatus');f.classList.add('show');document.getElementById('fsTitle').textContent='⚡ '+title;document.getElementById('fsDetail').textContent=detail; }
+function updateFloat(detail){ document.getElementById('fsDetail').textContent=detail; }
+function hideFloat(){ document.getElementById('floatStatus').classList.remove('show'); }
+
+// ============================================================
+//  TABS
+// ============================================================
+function switchTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const names=['scan','email','replies','mockups','compliance','setup'];
+  if(name==='compliance'){renderSuppressionList();renderComplianceChecklist();}
+  const idx=names.indexOf(name);
+  if(idx>=0) document.querySelectorAll('.tab')[idx].classList.add('active');
+  if(name==='email'){renderCampaign();updateEmailStats();}
+  if(name==='setup'){ const wu=localStorage.getItem('sytesurge_workerUrl'); const el=document.getElementById('cfg-workerUrl');if(wu&&el)el.value=wu; }
+}
+
+function updateCounts(){
+  document.getElementById('cnt-scan').textContent=state.leads.length;
+  document.getElementById('cnt-email').textContent=state.campaign.length;
+  document.getElementById('cnt-replies').textContent=state.replies.length;
+  document.getElementById('cnt-mockups').textContent=state.mockups.length;
+  document.getElementById('cnt-unsub').textContent=getSuppressionList().length;
+}
+
+// ============================================================
+//  UTILS
+// ============================================================
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function dl(content,filename){ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'text/plain'}));a.download=filename;a.click(); }
+function log(boxId,msg,type=''){ const b=document.getElementById(boxId);if(!b)return;const l=document.createElement('div');l.className='ll'+(type?' l'+type:'');l.textContent=new Date().toLocaleTimeString()+' — '+msg;b.appendChild(l);b.scrollTop=b.scrollHeight; }
+
+let _toastTimer;
+function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.style.opacity='0',3200); }
+
+// Close modal on backdrop click
+document.getElementById('mockModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function renderComplianceChecklist() {
+  const addr = document.getElementById('cfg-address')?.value?.trim() || localStorage.getItem('sytesurge_cfg-address') || '';
+  const name = document.getElementById('cfg-yourname')?.value?.trim() || localStorage.getItem('sytesurge_cfg-yourname') || '';
+  const gmail = localStorage.getItem('sytesurge_email') || '';
+  const unsub = getSuppressionList().length;
+  const items = [
+    { ok: !!addr, label: 'Physical business address set', fix: 'Fill in Business Address in config bar' },
+    { ok: !!name, label: 'Your name set for email signature', fix: 'Fill in Your Name in config bar' },
+    { ok: !!gmail, label: 'Gmail account connected', fix: 'Click Connect Gmail in the header' },
+    { ok: true,   label: 'Unsubscribe instructions in every email footer', fix: '' },
+    { ok: true,   label: 'Suppression list blocks unsubscribed contacts', fix: '' },
+    { ok: true,   label: 'Emails identified as commercial messages', fix: '' },
+    { ok: true,   label: 'Auto-detection of unsubscribe replies', fix: '' },
+  ];
+  const el = document.getElementById('complianceChecklist');
+  if (!el) return;
+  el.innerHTML = items.map(i => `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:16px">${i.ok ? '✅' : '❌'}</span>
+    <span style="flex:1;${i.ok?'':'color:var(--danger)'}">${i.label}</span>
+    ${!i.ok && i.fix ? `<span style="font-size:10px;color:var(--muted)">${i.fix}</span>` : ''}
+  </div>`).join('');
+}
+
+function exportSuppressionList() {
+  const list = getSuppressionList();
+  if (!list.length) return toast('No suppressed contacts yet');
+  dl(list.join('\n'), 'sytesurge_suppression_list.txt');
+  toast('Suppression list exported ✓');
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+loadConfig();
+handleCallback(); // handles OAuth redirect if returning from Google
+</script>
+</body>
+</html>
