@@ -209,7 +209,7 @@ td{padding:9px 12px;vertical-align:middle}
 
 <!-- CONFIG BAR -->
 <div class="config-bar">
-  <div class="config-field"><label>PLACES API KEY</label><input type="password" id="googleKey" placeholder="AIza..." style="width:150px"></div>
+  <div class="config-field"><label>DATA SOURCE</label><div style="font-family:'DM Mono',monospace;font-size:11px;background:rgba(67,233,123,.1);border:1px solid rgba(67,233,123,.3);color:var(--accent3);padding:6px 12px;border-radius:6px;white-space:nowrap">🗺️ OpenStreetMap · FREE · no key</div></div>
   <div class="config-field"><label>ANTHROPIC KEY</label><input type="password" id="anthropicKey" placeholder="sk-ant-..." style="width:160px"></div>
   <div class="config-field"><label>YOUR NAME</label><input type="text" id="cfg-yourname" placeholder="First Last" style="width:110px"></div>
   <div class="config-field"><label>BUSINESS ADDRESS ⚖️ CAN-SPAM REQUIRED</label><input type="text" id="cfg-address" placeholder="123 Main St, Mendham NJ 07945" style="width:230px;border-color:var(--accent4)"></div>
@@ -248,7 +248,7 @@ td{padding:9px 12px;vertical-align:middle}
 <!-- ======= SCANNER ======= -->
 <div class="panel active" id="panel-scan">
   <div class="section-header">
-    <div><div class="section-title">Business Scanner</div><div class="section-sub">Find businesses near Mendham, NJ — no website, Gmail contacts only</div></div>
+    <div><div class="section-title">Business Scanner</div><div class="section-sub">Live data from OpenStreetMap — real local businesses, filtered to those with no website</div></div>
   </div>
   <div class="stats-row">
     <div class="stat-card a1"><div class="stat-num" id="s-found">0</div><div class="stat-label">LEADS FOUND</div></div>
@@ -277,7 +277,7 @@ td{padding:9px 12px;vertical-align:middle}
         </select>
       </div>
     </div>
-    <div class="tog-row"><button class="tog on" id="tog-gmail" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Gmail only</span>
+    <div class="tog-row"><button class="tog" id="tog-gmail" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Has public email only</span>
       <button class="tog on" id="tog-noweb" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">No website only</span>
       <button class="tog" id="tog-phone" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Must have phone</span>
     </div>
@@ -627,11 +627,18 @@ Sytesurge | sytesurge.com</textarea>
   </div>
 
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Google Places API (optional)</div>
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Business Data — OpenStreetMap (free, no setup)</div>
     <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
-      Without this key, the scanner uses a built-in dataset of 50 local Mendham/Chester businesses — enough to test everything fully.<br>
-      With a key, it pulls <b>live data</b> from Google Maps (real businesses, real statuses). Cost: ~$0.50 per 100 businesses scanned. Free $200/month credit from Google.<br><br>
-      <b style="color:var(--text)">To get a key:</b> Google Cloud Console → Enable <b>Places API</b> → Create API Key → paste in the config bar above.
+      The scanner pulls <b>live, real business data</b> from <b>OpenStreetMap</b> via the public Overpass API. There is <b style="color:var(--accent3)">no API key, no billing account, and no cost</b> — nothing to set up. Just enter a location and press Start Scan.<br><br>
+      <b style="color:var(--text)">How it finds leads:</b> every OSM business record notes whether it has a <code>website</code>. With <b>“No website only”</b> on (default), you get exactly the businesses missing an online presence — your ideal prospects.<br><br>
+      <b style="color:var(--text)">Honest limitations:</b>
+      <ul style="margin:6px 0 0 18px;padding:0">
+        <li>OSM does <b>not</b> provide star ratings — the Rating column shows “—”. (No fabricated numbers.)</li>
+        <li>Most records have a phone but <b>no public email</b>. Email those that do; contact the rest by phone/contact form. The campaign step auto-skips leads with no email.</li>
+        <li>Coverage is community-maintained — dense in towns, thinner in rural areas. Widen the radius if results are sparse.</li>
+        <li><b>Attribution:</b> data is © OpenStreetMap contributors, licensed under the ODbL. Keep the credit shown in the scan log if you republish this data.</li>
+      </ul>
+      <br>Why not Google Places? It requires a billing account, charges ~$32 per 1,000 lookups, and its terms prohibit building a lead/marketing list from the data. OpenStreetMap is free and licensed for exactly this use.
     </div>
   </div>
 </div>
@@ -713,14 +720,14 @@ function removeFromSuppressionList(email) {
 }
 
 function saveConfig() {
-  ['googleKey','anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
+  ['anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
     const v = document.getElementById(id)?.value?.trim();
     if (v) localStorage.setItem('sytesurge_'+id, v);
   });
   toast('Config saved ✓');
 }
 function loadConfig() {
-  ['googleKey','anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
+  ['anthropicKey','cfg-yourname','cfg-address'].forEach(id => {
     const v = localStorage.getItem('sytesurge_'+id);
     if (v) { const el = document.getElementById(id); if(el) el.value = v; }
   });
@@ -1000,34 +1007,172 @@ function estimateLoss(cat) {
   return Math.round(320 * 0.032 * 85 * m * 12);
 }
 
+// ---- Free, real data via OpenStreetMap (Nominatim geocode + Overpass POIs) ----
+// No API key, no billing. Data © OpenStreetMap contributors (ODbL). Attribution required.
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+];
+
+// Map raw OSM tags to the app's category buckets — best effort, never fabricated.
+function osmCategory(t) {
+  const shop = t.shop, amenity = t.amenity, craft = t.craft, office = t.office, leisure = t.leisure;
+  if (['restaurant','cafe','fast_food','bar','pub','ice_cream','food_court','biergarten'].includes(amenity)) return 'restaurant';
+  if (['dentist','doctors','clinic','pharmacy','veterinary','hospital'].includes(amenity) ||
+      ['optician','medical_supply','chemist','herbalist','hearing_aids'].includes(shop) ||
+      leisure === 'fitness_centre') return 'health';
+  if (['hairdresser','beauty','nails','tattoo','massage'].includes(shop) || amenity === 'spa' || leisure === 'spa') return 'salon';
+  if (['car','car_repair','tyres','car_parts','motorcycle'].includes(shop) || ['car_wash','fuel'].includes(amenity)) return 'automotive';
+  if (['plumber','electrician','carpenter','painter','roofer','hvac','builder','stonemason','plasterer','tiler','gardener','glaziery'].includes(craft) || office === 'contractor') return 'contractor';
+  if (office) return 'professional';
+  if (shop) return 'retail';
+  if (craft) return 'service';
+  return 'service';
+}
+
+function osmAddress(t, fallbackLoc) {
+  const parts = [
+    [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' '),
+    t['addr:city'], t['addr:state'], t['addr:postcode']
+  ].filter(Boolean);
+  return parts.length ? parts.join(', ') : (fallbackLoc || '');
+}
+
+async function geocode(place) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(place);
+  const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!r.ok) throw new Error('geocode ' + r.status);
+  const d = await r.json();
+  if (!d.length) throw new Error('Location not found');
+  return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon), label: d[0].display_name };
+}
+
+async function overpassQuery(lat, lon, radius) {
+  const q = `[out:json][timeout:30];
+(
+  nwr["shop"](around:${radius},${lat},${lon});
+  nwr["craft"](around:${radius},${lat},${lon});
+  nwr["office"](around:${radius},${lat},${lon});
+  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|food_court|dentist|doctors|clinic|pharmacy|veterinary|car_wash|spa)$"](around:${radius},${lat},${lon});
+  nwr["leisure"~"^(fitness_centre|spa)$"](around:${radius},${lat},${lon});
+);
+out center tags 400;`;
+  let lastErr;
+  for (const ep of OVERPASS_ENDPOINTS) {
+    try {
+      const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+      if (!r.ok) { lastErr = new Error('overpass ' + r.status); continue; }
+      const d = await r.json();
+      return d.elements || [];
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('Overpass unavailable');
+}
+
 async function startScan() {
   state.abort.scan = false;
-  const max = parseInt(document.getElementById('scanMax').value) || 100;
+  const max     = parseInt(document.getElementById('scanMax').value) || 100;
+  const loc     = document.getElementById('scanLoc').value.trim() || 'Mendham, NJ';
+  const radius  = parseInt(document.getElementById('scanRadius').value) || 10000;
+  const catWant = document.getElementById('scanCat').value;
+  const noWebOnly = document.getElementById('tog-noweb').classList.contains('on'); // toggle ON = "no website only"
+  const emailOnly = document.getElementById('tog-gmail').classList.contains('on');
+  const phoneOnly = document.getElementById('tog-phone').classList.contains('on');
+
   setRunning('scan', true);
-  showFloat('Scanning businesses...', '0/'+max);
+  showFloat('Scanning businesses...', 'geocoding');
   state.leads = [];
   renderLeads();
+  document.getElementById('scanLog').innerHTML = '';
 
-  for (let i = 0; i < max && !state.abort.scan; i++) {
-    const seed = SEED[i % SEED.length];
-    const suffix = i >= SEED.length ? ' #'+Math.ceil(i/SEED.length+1) : '';
-    await sleep(60 + Math.random()*100);
-    if (state.abort.scan) break;
+  let elements = null, geoLabel = '';
+  try {
+    log('scanLog', `Locating "${loc}" via OpenStreetMap...`, 'info');
+    setProg('scan', 5, 'Geocoding location', loc);
+    const g = await geocode(loc);
+    geoLabel = g.label;
+    if (state.abort.scan) throw new Error('aborted');
+    log('scanLog', `📍 ${g.label} (${g.lat.toFixed(4)}, ${g.lon.toFixed(4)})`, 'ok');
+    log('scanLog', `Querying businesses within ${(radius/1000).toFixed(1)} km...`, 'info');
+    setProg('scan', 15, 'Querying OpenStreetMap', 'Overpass API');
+    elements = await overpassQuery(g.lat, g.lon, radius);
+    log('scanLog', `Overpass returned ${elements.length} raw records`, 'ok');
+  } catch (e) {
+    if (e.message === 'aborted') { setRunning('scan', false); hideFloat(); toast('Scan stopped'); return; }
+    log('scanLog', `⚠️ Live lookup failed (${e.message}). Falling back to built-in demo dataset.`, 'warn');
+    toast('Live data unavailable — using demo dataset');
+    elements = null;
+  }
 
-    const pct = Math.round((i+1)/max*100);
-    setProg('scan', pct, `Scanning ${i+1}/${max}`, seed.name+suffix);
-    updateFloat(`${i+1}/${max}`);
+  let count = 0;
+  const seen = new Set();
 
-    state.leads.push({
-      id: 'l'+i, name: seed.name+suffix, cat: seed.cat,
-      addr: seed.addr, email: seed.email, phone: seed.phone,
-      rating: +(seed.rating + (Math.random()*.3-.15)).toFixed(1),
-      loss: estimateLoss(seed.cat), reason: LOSS_REASONS[seed.cat]||'Lost to online-visible competitors',
-      selected: true, status: 'pending', sentAt: null
-    });
+  if (elements) {
+    // ---- REAL DATA PATH ----
+    for (let i = 0; i < elements.length && count < max && !state.abort.scan; i++) {
+      const t = elements[i].tags || {};
+      const name = t.name;
+      if (!name) continue;
 
-    if (i % 6 === 0) { renderLeads(); updateScanStats(); }
-    if (i % 10 === 0) log('scanLog', `Found: ${seed.name+suffix}`, 'ok');
+      const hasWebsite = !!(t.website || t['contact:website'] || t['brand:website'] || t.url);
+      const email = t.email || t['contact:email'] || '';
+      const phone = t.phone || t['contact:phone'] || t['phone:mobile'] || '';
+      const cat   = osmCategory(t);
+
+      // filters
+      if (noWebOnly && hasWebsite) continue;
+      if (emailOnly && !email) continue;
+      if (phoneOnly && !phone) continue;
+      if (catWant !== 'all' && cat !== catWant) continue;
+
+      const addr = osmAddress(t, geoLabel.split(',').slice(0,2).join(', '));
+      const key  = (name + '|' + addr).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      await sleep(8);
+      if (state.abort.scan) break;
+
+      state.leads.push({
+        id: 'l' + count, name, cat, addr, email, phone,
+        rating: null,                                   // OSM has no ratings — never fabricated
+        website: hasWebsite ? (t.website || t['contact:website']) : '',
+        loss: estimateLoss(cat),
+        reason: LOSS_REASONS[cat] || 'Lost to online-visible competitors',
+        selected: true, status: 'pending', sentAt: null
+      });
+      count++;
+      const pct = 20 + Math.round(count / max * 80);
+      setProg('scan', pct, `Found ${count}/${max}`, name);
+      updateFloat(`${count}/${max}`);
+      if (count % 5 === 0) { renderLeads(); updateScanStats(); }
+      if (count % 8 === 0) log('scanLog', `Found: ${name}`, 'ok');
+    }
+    if (!count && !state.abort.scan) {
+      log('scanLog', 'No matching businesses for these filters. Try a wider radius or turn off "No website only".', 'warn');
+    }
+    log('scanLog', 'Data © OpenStreetMap contributors (ODbL). Ratings unavailable from open data.', 'info');
+  } else {
+    // ---- DEMO FALLBACK PATH (clearly labeled) ----
+    for (let i = 0; i < max && !state.abort.scan; i++) {
+      const seed = SEED[i % SEED.length];
+      const suffix = i >= SEED.length ? ' #' + Math.ceil(i/SEED.length+1) : '';
+      await sleep(50);
+      if (state.abort.scan) break;
+      state.leads.push({
+        id: 'l' + i, name: seed.name + suffix, cat: seed.cat,
+        addr: seed.addr, email: seed.email, phone: seed.phone,
+        rating: +(seed.rating + (Math.random()*.3-.15)).toFixed(1),
+        website: '', loss: estimateLoss(seed.cat),
+        reason: LOSS_REASONS[seed.cat] || 'Lost to online-visible competitors',
+        selected: true, status: 'pending', sentAt: null, demo: true
+      });
+      count++;
+      setProg('scan', Math.round(count/max*100), `Demo ${count}/${max}`, seed.name+suffix);
+      updateFloat(`${count}/${max}`);
+      if (count % 6 === 0) { renderLeads(); updateScanStats(); }
+    }
+    log('scanLog', '⚠️ These are SAMPLE businesses (demo dataset), not live leads.', 'warn');
   }
 
   renderLeads(); updateScanStats(); updateCounts();
@@ -1055,7 +1200,7 @@ function renderLeads() {
     if (state.leadSort==='loss_d') return b.loss-a.loss;
     if (state.leadSort==='loss_a') return a.loss-b.loss;
     if (state.leadSort==='name')   return a.name.localeCompare(b.name);
-    if (state.leadSort==='rating') return b.rating-a.rating;
+    if (state.leadSort==='rating') return (b.rating??-1)-(a.rating??-1);
     return 0;
   });
   const tbody = document.getElementById('leadsBody');
@@ -1065,9 +1210,9 @@ function renderLeads() {
       <td><input type="checkbox" ${l.selected?'checked':''} onchange="toggleLead('${l.id}',this.checked)"></td>
       <td style="font-weight:600">${l.name}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${l.cat}</span></td>
-      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email}</td>
-      <td style="font-size:11px">${l.phone}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:11px">⭐${l.rating}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email || '<span style="color:var(--muted)">— no email —</span>'}</td>
+      <td style="font-size:11px">${l.phone || '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${l.rating==null?'<span style="color:var(--muted)">—</span>':'⭐'+l.rating}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600">$${l.loss.toLocaleString()}</td>
       <td style="font-size:11px;color:var(--muted);max-width:160px;line-height:1.4">${l.reason}</td>
       <td><div style="display:flex;gap:4px">
@@ -1083,8 +1228,8 @@ function setLeadFilter(el,v){ document.querySelectorAll('#panel-scan .chip').for
 
 function exportLeads() {
   if (!state.leads.length) return toast('No leads');
-  const csv = ['Name,Cat,Address,Email,Phone,Rating,Loss/yr,Reason']
-    .concat(state.leads.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email}","${l.phone}",${l.rating},${l.loss},"${l.reason}"`))
+  const csv = ['Name,Cat,Address,Email,Phone,Website,Rating,Est_Loss/yr,Reason']
+    .concat(state.leads.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
     .join('\n');
   dl(csv,'sytesurge_leads.csv');
 }
@@ -1109,7 +1254,7 @@ function getEmail(biz) {
   const vars = {
     '{{business_name}}': biz.name, '{{owner_name}}': 'Business Owner', '{{category}}': biz.cat,
     '{{city}}': biz.addr?.split(',')[1]?.trim()||'your area',
-    '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': biz.rating
+    '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': (biz.rating==null?'n/a':biz.rating)
   };
   Object.entries(vars).forEach(([k,v])=>{ sub=sub.replaceAll(k,v); body=body.replaceAll(k,v); });
   const bodyHtml = body.replace(/\n/g,'<br>');
@@ -1157,6 +1302,13 @@ async function startCampaign() {
   let sent=0, errs=0;
   for (let i=0; i<pending.length && !state.abort.campaign; i++) {
     const lead = pending[i];
+
+    // NO EMAIL ON FILE — most open-data leads have only a phone; skip cleanly
+    if (!lead.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(lead.email)) {
+      lead.status = 'noemail';
+      log('emailLog', `☎ Skipped (no email — contact by phone): ${lead.name}`, 'warn');
+      renderCampaign(); continue;
+    }
 
     // SUPPRESSION LIST CHECK — never email an unsubscribed contact
     if (isUnsubscribed(lead.email)) {
