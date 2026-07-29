@@ -286,6 +286,8 @@ td{padding:9px 12px;vertical-align:middle}
       <button class="btn btn-primary" id="btnScan" onclick="startScan()">🔍 Start Scan</button>
       <button class="btn btn-danger" id="btnStopScan" onclick="stopProcess('scan')" style="display:none">⏹ Stop</button>
       <button class="btn btn-ghost" onclick="exportLeads()">📥 Export CSV</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('csvFile').click()">📤 Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none" onchange="importLeads(this)">
       <button class="btn btn-ghost" onclick="clearLeads()">🗑 Clear</button>
       <button class="btn btn-ghost" onclick="clearContacted()">🧹 Reset Emailed History</button>
       <button class="btn btn-success" onclick="sendToEmail()">→ Send to Campaign</button>
@@ -1320,6 +1322,80 @@ function exportLeads() {
   dl(csv,'sytesurge_leads.csv');
 }
 function clearLeads(){ if(!confirm('Clear all leads?'))return; state.leads=[]; renderLeads(); updateScanStats(); updateCounts(); }
+
+// ---- Import a CSV of leads (from your own research or a batch prepared for you) ----
+// Recognized headers (case-insensitive): name, category/cat, address/addr,
+// email, phone, website, rating, reason. Only "name" is required.
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', inQ = false;
+  text = text.replace(/\r\n?/g, '\n');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ''));
+}
+function importLeads(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (rows.length < 2) { toast('CSV has no data rows'); input.value=''; return; }
+      const head = rows[0].map(h => h.trim().toLowerCase());
+      const col = names => { for (const n of names){ const i = head.indexOf(n); if (i>=0) return i; } return -1; };
+      const ci = {
+        name: col(['name','business','business name']),
+        cat:  col(['cat','category','type']),
+        addr: col(['address','addr']),
+        email:col(['email','e-mail']),
+        phone:col(['phone','telephone','tel']),
+        web:  col(['website','url','site']),
+        rating:col(['rating','stars']),
+        reason:col(['reason','note','notes']),
+      };
+      if (ci.name < 0) { toast('CSV needs a "Name" column'); input.value=''; return; }
+      const base = state.leads.length;
+      let added = 0, skipped = 0;
+      const contactedSet = new Set(getContacted());
+      const hideContacted = document.getElementById('tog-contacted').classList.contains('on');
+      for (let r = 1; r < rows.length; r++) {
+        const get = i => (i>=0 && rows[r][i] != null) ? rows[r][i].trim() : '';
+        const name = get(ci.name);
+        if (!name) continue;
+        const cat = (get(ci.cat) || 'service').toLowerCase();
+        const addr = get(ci.addr);
+        const email = get(ci.email);
+        if (hideContacted && contactedSet.has(contactKey(name, email, addr))) { skipped++; continue; }
+        const ratingRaw = get(ci.rating);
+        state.leads.push({
+          id: 'imp' + (base + added), name, cat, addr,
+          email, phone: get(ci.phone), website: get(ci.web),
+          rating: ratingRaw ? parseFloat(ratingRaw) : null,
+          loss: estimateLoss(cat),
+          reason: get(ci.reason) || LOSS_REASONS[cat] || 'Lost to online-visible competitors',
+          selected: true, status: 'pending', sentAt: null
+        });
+        added++;
+      }
+      renderLeads(); updateScanStats(); updateCounts();
+      toast(`Imported ${added} lead(s)${skipped?`, skipped ${skipped} already-emailed`:''} ✓`);
+      log('scanLog', `📤 Imported ${added} lead(s) from ${file.name}.`, 'ok');
+    } catch (err) {
+      toast('Could not read that CSV');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
 function sendToEmail(){
   const sel=state.leads.filter(l=>l.selected);
   if(!sel.length) return toast('Select leads first');
