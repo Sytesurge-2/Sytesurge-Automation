@@ -1257,6 +1257,12 @@ function getEmail(biz) {
     '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': (biz.rating==null?'n/a':biz.rating)
   };
   Object.entries(vars).forEach(([k,v])=>{ sub=sub.replaceAll(k,v); body=body.replaceAll(k,v); });
+  // Make links clickable: if you write your own <a> tag it's left as-is; otherwise
+  // any plain URL you paste (https://... or www...) is auto-converted to a clickable link.
+  if (!/<a\s/i.test(body)) {
+    body = body.replace(/(^|[\s(>])((?:https?:\/\/|www\.)[^\s<)]+)/gi,
+      (m, pre, url) => pre + '<a href="' + (url.startsWith('http') ? url : 'https://' + url) + '" style="color:#2563eb;text-decoration:underline">' + url + '</a>');
+  }
   const bodyHtml = body.replace(/\n/g,'<br>');
 
   // CAN-SPAM COMPLIANT FOOTER — legally required
