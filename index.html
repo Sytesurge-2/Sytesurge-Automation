@@ -280,12 +280,14 @@ td{padding:9px 12px;vertical-align:middle}
     <div class="tog-row"><button class="tog" id="tog-gmail" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Has public email only</span>
       <button class="tog on" id="tog-noweb" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">No website only</span>
       <button class="tog" id="tog-phone" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Must have phone</span>
+      <button class="tog on" id="tog-contacted" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Hide already-emailed</span>
     </div>
     <div class="controls">
       <button class="btn btn-primary" id="btnScan" onclick="startScan()">🔍 Start Scan</button>
       <button class="btn btn-danger" id="btnStopScan" onclick="stopProcess('scan')" style="display:none">⏹ Stop</button>
       <button class="btn btn-ghost" onclick="exportLeads()">📥 Export CSV</button>
       <button class="btn btn-ghost" onclick="clearLeads()">🗑 Clear</button>
+      <button class="btn btn-ghost" onclick="clearContacted()">🧹 Reset Emailed History</button>
       <button class="btn btn-success" onclick="sendToEmail()">→ Send to Campaign</button>
     </div>
     <div id="scanProgress" style="display:none">
@@ -701,6 +703,35 @@ function addToSuppressionList(email) {
 function isUnsubscribed(email) {
   return getSuppressionList().includes((email||'').toLowerCase().trim());
 }
+
+// ============================================================
+//  ALREADY-CONTACTED MEMORY (persistent — avoids re-emailing)
+// ============================================================
+// A business is keyed by its email if it has one, otherwise by name+address so
+// even phone-only leads are remembered. Persists in localStorage across scans.
+function getContacted() {
+  try { return JSON.parse(localStorage.getItem('sytesurge_contacted') || '[]'); } catch(e) { return []; }
+}
+function contactKey(nameOrLead, email, addr) {
+  if (typeof nameOrLead === 'object' && nameOrLead) { email = nameOrLead.email; addr = nameOrLead.addr; nameOrLead = nameOrLead.name; }
+  const em = (email || '').toLowerCase().trim();
+  return em ? em : ((nameOrLead || '') + '|' + (addr || '')).toLowerCase().trim();
+}
+function isContacted(nameOrLead, email, addr) {
+  return getContacted().includes(contactKey(nameOrLead, email, addr));
+}
+function markContacted(lead) {
+  const list = getContacted();
+  const k = contactKey(lead);
+  if (k && !list.includes(k)) { list.push(k); localStorage.setItem('sytesurge_contacted', JSON.stringify(list)); }
+}
+function clearContacted() {
+  const n = getContacted().length;
+  if (!n) return toast('No emailed history yet');
+  if (!confirm(`Reset emailed history (${n})? Businesses you already emailed will be able to appear in scans again.`)) return;
+  localStorage.removeItem('sytesurge_contacted');
+  toast('Emailed history cleared');
+}
 function renderSuppressionList() {
   const list = getSuppressionList();
   const el = document.getElementById('suppressionList');
@@ -1016,15 +1047,18 @@ const OVERPASS_ENDPOINTS = [
 
 // Map raw OSM tags to the app's category buckets — best effort, never fabricated.
 function osmCategory(t) {
-  const shop = t.shop, amenity = t.amenity, craft = t.craft, office = t.office, leisure = t.leisure;
+  const shop = t.shop, amenity = t.amenity, craft = t.craft, office = t.office, leisure = t.leisure, healthcare = t.healthcare, tourism = t.tourism;
   if (['restaurant','cafe','fast_food','bar','pub','ice_cream','food_court','biergarten'].includes(amenity)) return 'restaurant';
-  if (['dentist','doctors','clinic','pharmacy','veterinary','hospital'].includes(amenity) ||
+  if (healthcare ||
+      ['dentist','doctors','clinic','pharmacy','veterinary','hospital'].includes(amenity) ||
       ['optician','medical_supply','chemist','herbalist','hearing_aids'].includes(shop) ||
-      leisure === 'fitness_centre') return 'health';
+      ['fitness_centre','sports_centre','dance'].includes(leisure)) return 'health';
   if (['hairdresser','beauty','nails','tattoo','massage'].includes(shop) || amenity === 'spa' || leisure === 'spa') return 'salon';
-  if (['car','car_repair','tyres','car_parts','motorcycle'].includes(shop) || ['car_wash','fuel'].includes(amenity)) return 'automotive';
+  if (['car','car_repair','tyres','car_parts','motorcycle'].includes(shop) || ['car_wash','fuel','car_rental'].includes(amenity)) return 'automotive';
   if (['plumber','electrician','carpenter','painter','roofer','hvac','builder','stonemason','plasterer','tiler','gardener','glaziery'].includes(craft) || office === 'contractor') return 'contractor';
-  if (office) return 'professional';
+  if (office || ['bank','driving_school','language_school','music_school'].includes(amenity)) return 'professional';
+  if (['hotel','guest_house','motel','hostel','apartment'].includes(tourism)) return 'service';
+  if (['museum','gallery'].includes(tourism)) return 'retail';
   if (shop) return 'retail';
   if (craft) return 'service';
   return 'service';
@@ -1053,10 +1087,12 @@ async function overpassQuery(lat, lon, radius) {
   nwr["shop"](around:${radius},${lat},${lon});
   nwr["craft"](around:${radius},${lat},${lon});
   nwr["office"](around:${radius},${lat},${lon});
-  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|food_court|dentist|doctors|clinic|pharmacy|veterinary|car_wash|spa)$"](around:${radius},${lat},${lon});
-  nwr["leisure"~"^(fitness_centre|spa)$"](around:${radius},${lat},${lon});
+  nwr["healthcare"](around:${radius},${lat},${lon});
+  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|food_court|dentist|doctors|clinic|pharmacy|veterinary|car_wash|car_rental|fuel|spa|bank|driving_school|language_school|music_school|cinema|nightclub|marketplace)$"](around:${radius},${lat},${lon});
+  nwr["leisure"~"^(fitness_centre|spa|sports_centre|golf_course|dance|escape_game|bowling_alley)$"](around:${radius},${lat},${lon});
+  nwr["tourism"~"^(hotel|guest_house|motel|hostel|apartment|museum|gallery)$"](around:${radius},${lat},${lon});
 );
-out center tags 400;`;
+out center tags 600;`;
   let lastErr;
   for (const ep of OVERPASS_ENDPOINTS) {
     try {
@@ -1078,6 +1114,9 @@ async function startScan() {
   const noWebOnly = document.getElementById('tog-noweb').classList.contains('on'); // toggle ON = "no website only"
   const emailOnly = document.getElementById('tog-gmail').classList.contains('on');
   const phoneOnly = document.getElementById('tog-phone').classList.contains('on');
+  const hideContacted = document.getElementById('tog-contacted').classList.contains('on');
+  const contactedSet = new Set(getContacted());
+  let skippedContacted = 0;
 
   setRunning('scan', true);
   showFloat('Scanning businesses...', 'geocoding');
@@ -1095,7 +1134,16 @@ async function startScan() {
     log('scanLog', `📍 ${g.label} (${g.lat.toFixed(4)}, ${g.lon.toFixed(4)})`, 'ok');
     log('scanLog', `Querying businesses within ${(radius/1000).toFixed(1)} km...`, 'info');
     setProg('scan', 15, 'Querying OpenStreetMap', 'Overpass API');
-    elements = await overpassQuery(g.lat, g.lon, radius);
+    let radiusTry = radius, attempts = 0;
+    elements = await overpassQuery(g.lat, g.lon, radiusTry);
+    // If the area is sparse, automatically widen the search (up to 40 km) so rural
+    // locations still return a useful number of leads.
+    while (elements.length < 60 && radiusTry < 40000 && attempts < 2 && !state.abort.scan) {
+      radiusTry = Math.min(radiusTry * 2, 40000);
+      log('scanLog', `Only ${elements.length} nearby — widening search to ${(radiusTry/1000).toFixed(1)} km...`, 'info');
+      elements = await overpassQuery(g.lat, g.lon, radiusTry);
+      attempts++;
+    }
     log('scanLog', `Overpass returned ${elements.length} raw records`, 'ok');
   } catch (e) {
     if (e.message === 'aborted') { setRunning('scan', false); hideFloat(); toast('Scan stopped'); return; }
@@ -1126,6 +1174,8 @@ async function startScan() {
       if (catWant !== 'all' && cat !== catWant) continue;
 
       const addr = osmAddress(t, geoLabel.split(',').slice(0,2).join(', '));
+      // skip businesses already emailed in a previous campaign (toggle-controlled)
+      if (hideContacted && contactedSet.has(contactKey(name, email, addr))) { skippedContacted++; continue; }
       const key  = (name + '|' + addr).toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
@@ -1148,6 +1198,9 @@ async function startScan() {
       if (count % 5 === 0) { renderLeads(); updateScanStats(); }
       if (count % 8 === 0) log('scanLog', `Found: ${name}`, 'ok');
     }
+    if (skippedContacted) {
+      log('scanLog', `🧹 Hid ${skippedContacted} business(es) you already emailed. Turn off "Hide already-emailed" to include them for follow-ups.`, 'info');
+    }
     if (!count && !state.abort.scan) {
       log('scanLog', 'No matching businesses for these filters. Try a wider radius or turn off "No website only".', 'warn');
     }
@@ -1157,6 +1210,7 @@ async function startScan() {
     for (let i = 0; i < max && !state.abort.scan; i++) {
       const seed = SEED[i % SEED.length];
       const suffix = i >= SEED.length ? ' #' + Math.ceil(i/SEED.length+1) : '';
+      if (hideContacted && contactedSet.has(contactKey(seed.name + suffix, seed.email, seed.addr))) { skippedContacted++; continue; }
       await sleep(50);
       if (state.abort.scan) break;
       state.leads.push({
@@ -1331,7 +1385,7 @@ async function startCampaign() {
     if (mode==='live') {
       const ok = await sendGmail(lead.email, subject, body);
       lead.status = ok ? 'sent' : 'error';
-      if (ok) { sent++; log('emailLog',`✓ Sent → ${lead.email}`,'ok'); }
+      if (ok) { sent++; markContacted(lead); log('emailLog',`✓ Sent → ${lead.email}`,'ok'); }
       else     { errs++; log('emailLog',`✗ Failed → ${lead.email}`,'err'); }
       await sleep(delay);
     } else {
