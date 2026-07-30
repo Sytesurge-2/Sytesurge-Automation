@@ -109,6 +109,7 @@ td{padding:9px 12px;vertical-align:middle}
 .s-pending{background:var(--muted)}
 .s-sent{background:var(--accent3)}
 .s-error{background:var(--danger)}
+.s-sim{background:var(--accent4)}
 
 /* CONTROLS ROW */
 .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
@@ -213,9 +214,15 @@ td{padding:9px 12px;vertical-align:middle}
   <div class="config-field"><label>ANTHROPIC KEY</label><input type="password" id="anthropicKey" placeholder="sk-ant-..." style="width:160px"></div>
   <div class="config-field"><label>YOUR NAME</label><input type="text" id="cfg-yourname" placeholder="First Last" style="width:110px"></div>
   <div class="config-field"><label>BUSINESS ADDRESS ⚖️ CAN-SPAM REQUIRED</label><input type="text" id="cfg-address" placeholder="123 Main St, Mendham NJ 07945" style="width:230px;border-color:var(--accent4)"></div>
+  <div class="config-field"><label>SEND VIA</label>
+    <select id="emailProvider" onchange="onProviderChange()" style="width:110px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px">
+      <option value="gmail">Gmail</option>
+      <option value="zoho">Zoho Mail</option>
+    </select>
+  </div>
   <div id="gmailConnectedPill" style="display:none;font-family:'DM Mono',monospace;font-size:11px;background:rgba(67,233,123,.1);border:1px solid rgba(67,233,123,.3);color:var(--accent3);padding:4px 12px;border-radius:20px"></div>
-  <button class="btn btn-primary btn-sm" id="btnGmailConnect" onclick="startOAuth()">🔐 Connect Gmail</button>
-  <button class="btn btn-danger btn-sm" id="btnGmailDisconnect" onclick="disconnectGmail()" style="display:none">✕ Disconnect</button>
+  <button class="btn btn-primary btn-sm" id="btnGmailConnect" onclick="connectEmail()">🔐 Connect Gmail</button>
+  <button class="btn btn-danger btn-sm" id="btnGmailDisconnect" onclick="disconnectEmail()" style="display:none">✕ Disconnect</button>
   <button class="btn btn-ghost btn-sm" onclick="saveConfig()">💾 Save</button>
 </div>
 <!-- CAN-SPAM ADDRESS WARNING -->
@@ -226,9 +233,9 @@ td{padding:9px 12px;vertical-align:middle}
 <!-- OAUTH SETUP BANNER (shown when not connected) -->
 <div class="auth-banner" id="authBanner">
   <div style="font-size:26px">🔐</div>
-  <div class="auth-banner-text">
-    <strong>Connect Gmail to send real emails</strong>
-    Gmail isn't connected yet. Click <b>Connect Gmail</b> above after completing the one-time setup in the <b>⚙️ Setup Guide</b> tab. No passwords — Google handles login securely.
+  <div class="auth-banner-text" id="authBannerText">
+    <strong>Connect an email account to send real emails</strong>
+    No account connected yet. Pick <b>Gmail</b> or <b>Zoho Mail</b> in "SEND VIA" above, then click <b>Connect</b> after completing the one-time setup in the <b>⚙️ Setup Guide</b> tab. No passwords — the provider handles login securely.
   </div>
   <button class="btn btn-ghost btn-sm" onclick="switchTab('setup')">View Setup Guide →</button>
 </div>
@@ -434,7 +441,11 @@ Sytesurge | sytesurge.com</textarea>
       <button class="btn btn-ghost" onclick="reanalyzeAll()">🧠 Re-analyze All</button>
       <button class="btn btn-ghost" onclick="exportScores()">📥 Export Scores</button>
       <button class="btn btn-ghost btn-sm" onclick="addTestReply()">+ Test Reply</button>
+      <label style="display:flex;align-items:center;gap:6px;margin-left:8px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
+        <input type="checkbox" id="autoReplyToggle" onchange="toggleAutoReplyCheck()"> 🔁 Auto-check every 10 min
+      </label>
     </div>
+    <div style="font-size:11px;color:var(--muted);padding:0 0 8px">⚠️ Auto-check only runs while this browser tab is open. Closing the tab pauses it — check manually if you've been away.</div>
     <div class="filter-row">
       <div class="chip active" onclick="setReplyFilter(this,'all')">All</div>
       <div class="chip" onclick="setReplyFilter(this,'hot')">🔥 Hot (80%+)</div>
@@ -516,7 +527,7 @@ Sytesurge | sytesurge.com</textarea>
         <strong style="color:var(--text);font-family:'Syne',sans-serif;font-size:13px;display:block;margin-bottom:6px">✅ What this app does automatically</strong>
         • Appends physical address to every email<br>
         • Includes plain-language unsubscribe instructions<br>
-        • Auto-detects "remove me" replies → suppression list<br>
+        • Detects "remove me" replies → suppression list (manually, or automatically every 10 min if you turn on "Auto-check" in the Replies tab — only while this tab stays open)<br>
         • Blocks suppressed contacts before every send<br>
         • Identifies emails as commercial messages<br>
         • Honest subject lines (no deception)
@@ -545,11 +556,12 @@ Sytesurge | sytesurge.com</textarea>
 
 <!-- ======= SETUP GUIDE ======= -->
 <div class="panel" id="panel-setup">
-  <div class="section-header"><div><div class="section-title">Setup Guide</div><div class="section-sub">One-time setup to connect Gmail with real OAuth — no passwords ever</div></div></div>
+  <div class="section-header"><div><div class="section-title">Setup Guide</div><div class="section-sub">One-time setup to connect Gmail or Zoho Mail with real OAuth — no passwords ever</div></div></div>
 
   <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.25);border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:13px;line-height:1.7">
     <strong style="font-family:'Syne',sans-serif;font-size:15px;display:block;margin-bottom:4px">Why OAuth and not a password?</strong>
-    With OAuth, you log in directly through Google's own screen — Sytesurge never sees your password. Google gives the app a temporary access token instead. It's the same way "Sign in with Google" works on any website. Your credentials stay entirely with Google.
+    With OAuth, you log in directly through your provider's own screen — Sytesurge never sees your password. The provider gives the app a temporary access token instead. It's the same way "Sign in with Google" works on any website. Your credentials stay entirely with them.<br><br>
+    <strong style="color:var(--accent4)">Sending from info@sytesurge.com?</strong> That mailbox lives on <b>Zoho Mail</b>, not Gmail — pick <b>Zoho Mail</b> in the "SEND VIA" dropdown up top and use the Zoho Mail Setup card below, not the Google one. Gmail only works if you're actually sending from a real Gmail/Google Workspace inbox.
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
@@ -590,22 +602,23 @@ Sytesurge | sytesurge.com</textarea>
 
     <div class="setup-step">
       <div class="step-num">3</div>
-      <div class="step-title">Connect Gmail</div>
+      <div class="step-title">Connect</div>
       <div class="step-body">
-        <b>1.</b> Open the dashboard from your GitHub Pages URL<br>
-        <b>2.</b> Paste your <b>Client ID</b> below and save<br>
-        <b>3.</b> Click <b>Connect Gmail</b> in the header<br>
-        <b>4.</b> Google's login screen appears → sign in as <b>info@sytesurge.com</b><br>
-        <b>5.</b> Approve the Gmail send permission<br>
-        <b>6.</b> You're redirected back → header shows <b>✓ Connected</b><br><br>
-        ✅ Done! The token is saved in your browser. You won't need to reconnect unless you clear browser data.
+        <b>1.</b> Open the dashboard from your live URL<br>
+        <b>2.</b> Pick <b>Gmail</b> or <b>Zoho Mail</b> in "SEND VIA" (top bar)<br>
+        <b>3.</b> Paste that provider's Client ID/Secret below and save<br>
+        <b>4.</b> Click <b>Connect</b> in the header<br>
+        <b>5.</b> Provider's login screen appears → sign in as <b>info@sytesurge.com</b><br>
+        <b>6.</b> Approve the mail-send permission<br>
+        <b>7.</b> You're redirected back → header shows <b>✓ Connected</b><br><br>
+        ✅ Done! The token is saved in your browser. You won't need to reconnect unless you clear browser data. Both providers can stay connected at once — the "SEND VIA" dropdown picks which one is active.
       </div>
     </div>
 
   </div>
 
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>OAuth Credentials</div>
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Google OAuth Credentials (Gmail only)</div>
     <div class="input-row" style="flex-wrap:nowrap;gap:12px">
       <div class="field" style="flex:2">
         <label>OAUTH CLIENT ID</label>
@@ -628,6 +641,43 @@ Sytesurge | sytesurge.com</textarea>
     </div>
     <div style="margin-top:8px;padding:12px;background:rgba(255,71,87,.07);border:1px solid rgba(255,71,87,.2);border-radius:8px;font-size:12px;color:var(--danger)">
       ⚠️ Your Client Secret is stored only in your browser — never sent anywhere except Google's servers.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Zoho Mail Setup — for info@sytesurge.com</div>
+    <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
+      Use this if you actually send from a <b style="color:var(--text)">Zoho Mail</b> inbox (like <b style="color:var(--text)">info@sytesurge.com</b>) — the Gmail card above won't work for that address.<br><br>
+      <b style="color:var(--text)">1.</b> Go to <span class="mono">api-console.zoho.com</span> and sign in with the Zoho account that owns the mailbox<br>
+      <b style="color:var(--text)">2.</b> Click <b>Add Client</b> → choose <b>Server-based Applications</b><br>
+      <b style="color:var(--text)">3.</b> Homepage URL: your dashboard's live URL. Authorized Redirect URI: <span class="mono">your dashboard's live URL</span> (same value as the "Netlify / Cloudflare URL" field below)<br>
+      <b style="color:var(--text)">4.</b> After creating the client, open its <b>Client Secret</b> tab and find <b>CORS Domains</b> — add your dashboard's URL there too. <span style="color:var(--danger)">This step is required</span> — without it, Zoho blocks requests made directly from the browser and sending will fail with a network error.<br>
+      <b style="color:var(--text)">5.</b> Copy the <b>Client ID</b> and <b>Client Secret</b> into the fields below and Save<br>
+      <b style="color:var(--text)">6.</b> Pick <b>Zoho Mail</b> in "SEND VIA" at the top, click <b>Connect</b>, and sign in as <b>info@sytesurge.com</b><br><br>
+      <b style="color:var(--text)">Honest note:</b> this integration is built directly against Zoho's published Mail API, but I can't run a live test of it in this environment. Send yourself a real test email first — if it fails, the exact error from Zoho will show in the campaign log, and that error message is what tells us what to fix.
+    </div>
+    <div class="input-row" style="flex-wrap:nowrap;gap:12px;margin-top:8px">
+      <div class="field" style="flex:2">
+        <label>ZOHO CLIENT ID</label>
+        <input id="cfg-zohoClientId" placeholder="1000.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+      </div>
+      <div class="field" style="flex:1">
+        <label>ZOHO CLIENT SECRET</label>
+        <input type="password" id="cfg-zohoClientSecret" placeholder="e.g. a1b2c3..." style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>YOUR LIVE URL (same value as the redirect URI used for Gmail above)</label>
+      <input id="cfg-redirectUriZoho" placeholder="https://melodic-cocada-526d67.netlify.app" style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveZohoClientId()">💾 Save Zoho Credentials</button>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:rgba(67,233,123,.07);border:1px solid rgba(67,233,123,.2);border-radius:8px;font-size:12px;color:var(--accent3)">
+      ✅ Fill in both fields above → click Save → set "SEND VIA" to Zoho Mail → click <b>🔐 Connect</b> in the header bar.
+    </div>
+    <div style="margin-top:8px;padding:12px;background:rgba(255,71,87,.07);border:1px solid rgba(255,71,87,.2);border-radius:8px;font-size:12px;color:var(--danger)">
+      ⚠️ Your Client Secret is stored only in your browser — never sent anywhere except Zoho's servers.
     </div>
   </div>
 
@@ -682,8 +732,16 @@ const state = {
   leads: [], campaign: [], replies: [], mockups: [],
   leadFilter: 'all', replyFilter: 'all',
   leadSort: 'loss_d', replySort: 'score_d',
-  abort: { scan:false, campaign:false, replies:false, mockups:false }
+  abort: { scan:false, campaign:false, replies:false, mockups:false },
+  running: { scan:false, campaign:false, replies:false, mockups:false }
 };
+let autoReplyTimer = null;
+
+// ============================================================
+//  EMAIL PROVIDER (Gmail or Zoho Mail)
+// ============================================================
+function getProvider() { return localStorage.getItem('sytesurge_provider') || 'gmail'; }
+function setProvider(p) { localStorage.setItem('sytesurge_provider', p); }
 
 // ============================================================
 //  CONFIG / PERSIST
@@ -775,7 +833,16 @@ function loadConfig() {
   if (sec) { const el = document.getElementById('cfg-clientSecret'); if(el) el.value = sec; }
   const ru = localStorage.getItem('sytesurge_redirectUri');
   if (ru) { const el = document.getElementById('cfg-redirectUri'); if(el) el.value = ru; }
-  checkGmailStatus();
+  if (ru) { const el = document.getElementById('cfg-redirectUriZoho'); if(el) el.value = ru; }
+  const zcid = localStorage.getItem('sytesurge_zohoClientId');
+  if (zcid) { const el = document.getElementById('cfg-zohoClientId'); if(el) el.value = zcid; }
+  const zsec = localStorage.getItem('sytesurge_zohoClientSecret');
+  if (zsec) { const el = document.getElementById('cfg-zohoClientSecret'); if(el) el.value = zsec; }
+  const autoOn = localStorage.getItem('sytesurge_autoReply') === '1';
+  const autoEl = document.getElementById('autoReplyToggle');
+  if (autoEl) autoEl.checked = autoOn;
+  if (autoOn) startAutoReplyPolling();
+  refreshConnectedUI();
 }
 function saveClientId() {
   const cid = document.getElementById('cfg-clientId')?.value?.trim();
@@ -788,8 +855,23 @@ function saveClientId() {
     const clean = ru.replace(/\/+$/, '');
     localStorage.setItem('sytesurge_redirectUri', clean);
     document.getElementById('cfg-redirectUri').value = clean;
+    const zEl = document.getElementById('cfg-redirectUriZoho'); if (zEl) zEl.value = clean;
   }
-  toast('OAuth credentials saved ✓');
+  toast('Google OAuth credentials saved ✓');
+}
+function saveZohoClientId() {
+  const cid = document.getElementById('cfg-zohoClientId')?.value?.trim();
+  const sec = document.getElementById('cfg-zohoClientSecret')?.value?.trim();
+  const ru  = document.getElementById('cfg-redirectUriZoho')?.value?.trim();
+  if (cid) localStorage.setItem('sytesurge_zohoClientId', cid);
+  if (sec) localStorage.setItem('sytesurge_zohoClientSecret', sec);
+  if (ru)  {
+    const clean = ru.replace(/\/+$/, '');
+    localStorage.setItem('sytesurge_redirectUri', clean);
+    document.getElementById('cfg-redirectUriZoho').value = clean;
+    const gEl = document.getElementById('cfg-redirectUri'); if (gEl) gEl.value = clean;
+  }
+  toast('Zoho OAuth credentials saved ✓');
 }
 
 // ============================================================
@@ -810,10 +892,10 @@ async function startOAuth() {
   const clientSecret = localStorage.getItem('sytesurge_clientSecret');
   const redirectUri  = localStorage.getItem('sytesurge_redirectUri') || window.location.href.split('?')[0].replace(/\/+$/,'');
   if (!clientId) {
-    toast('Paste your Client ID in the Setup Guide tab first'); switchTab('setup'); return;
+    toast('Paste your Google Client ID in the Setup Guide tab first'); switchTab('setup'); return;
   }
   if (!clientSecret) {
-    toast('Paste your Client Secret in the Setup Guide tab too'); switchTab('setup'); return;
+    toast('Paste your Google Client Secret in the Setup Guide tab too'); switchTab('setup'); return;
   }
   const { verifier, challenge } = await pkce();
   sessionStorage.setItem('pkce_v', verifier);
@@ -831,11 +913,36 @@ async function startOAuth() {
   window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
 }
 
+async function startZohoOAuth() {
+  const clientId     = localStorage.getItem('sytesurge_zohoClientId');
+  const clientSecret = localStorage.getItem('sytesurge_zohoClientSecret');
+  const redirectUri  = localStorage.getItem('sytesurge_redirectUri') || window.location.href.split('?')[0].replace(/\/+$/,'');
+  if (!clientId) {
+    toast('Paste your Zoho Client ID in the Setup Guide tab first'); switchTab('setup'); return;
+  }
+  if (!clientSecret) {
+    toast('Paste your Zoho Client Secret in the Setup Guide tab too'); switchTab('setup'); return;
+  }
+  const p = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  redirectUri,
+    response_type: 'code',
+    scope:         'ZohoMail.messages.ALL,ZohoMail.accounts.READ,ZohoMail.folders.READ',
+    access_type:   'offline',
+    prompt:        'consent',
+    state: 'sytesurge_oauth_zoho'
+  });
+  window.location.href = 'https://accounts.zoho.com/oauth/v2/auth?' + p;
+}
+
 async function handleCallback() {
   const p = new URLSearchParams(window.location.search);
-  if (p.get('state') !== 'sytesurge_oauth' || !p.get('code')) return;
+  const st = p.get('state');
+  if ((st !== 'sytesurge_oauth' && st !== 'sytesurge_oauth_zoho') || !p.get('code')) return;
   // Clean the URL immediately
   history.replaceState({}, '', window.location.pathname);
+
+  if (st === 'sytesurge_oauth_zoho') { await handleZohoCallback(p); return; }
 
   const code        = p.get('code');
   const verifier    = sessionStorage.getItem('pkce_v');
@@ -872,12 +979,67 @@ async function handleCallback() {
     });
     const ud = await ur.json();
     localStorage.setItem('sytesurge_email', ud.email || '');
-    setGmailConnected(ud.email || 'Connected');
+    setProvider('gmail');
+    refreshConnectedUI();
     toast('Gmail connected as ' + (ud.email || 'your account') + ' ✓');
   } catch(e) {
     toast('OAuth error: ' + e.message);
     console.error('OAuth token exchange failed:', e);
   }
+}
+
+async function handleZohoCallback(p) {
+  const code        = p.get('code');
+  const clientId     = localStorage.getItem('sytesurge_zohoClientId');
+  const clientSecret = localStorage.getItem('sytesurge_zohoClientSecret') || '';
+  const redirectUri  = localStorage.getItem('sytesurge_redirectUri') || window.location.href.split('?')[0];
+
+  toast('Completing Zoho sign-in...');
+
+  try {
+    const tokenParams = {
+      code, client_id: clientId, client_secret: clientSecret,
+      redirect_uri: redirectUri, grant_type: 'authorization_code'
+    };
+    const r = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(tokenParams)
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error_description || d.error);
+    if (!d.access_token) throw new Error('Zoho did not return an access token — check Client ID/Secret and that the CORS Domain is set in the Zoho API Console.');
+
+    localStorage.setItem('sytesurge_zohoAccessToken', d.access_token);
+    localStorage.setItem('sytesurge_zohoTokenExpiry', Date.now() + (d.expires_in - 60) * 1000);
+    if (d.refresh_token) localStorage.setItem('sytesurge_zohoRefreshToken', d.refresh_token);
+
+    // Fetch the mailbox's accountId + address — required for every send/read call
+    const acct = await fetchZohoAccountInfo(d.access_token);
+    if (!acct) throw new Error('Connected, but could not read your Zoho mailbox info. Try reconnecting.');
+
+    localStorage.setItem('sytesurge_zohoAccountId', acct.accountId);
+    localStorage.setItem('sytesurge_zohoEmail', acct.email);
+    setProvider('zoho');
+    refreshConnectedUI();
+    toast('Zoho Mail connected as ' + acct.email + ' ✓');
+  } catch(e) {
+    toast('Zoho OAuth error: ' + e.message);
+    console.error('Zoho token exchange failed:', e);
+  }
+}
+
+async function fetchZohoAccountInfo(accessToken) {
+  try {
+    const r = await fetch('https://mail.zoho.com/api/accounts', {
+      headers: { Authorization: 'Zoho-oauthtoken ' + accessToken }
+    });
+    const d = await r.json();
+    const acct = d.data?.[0];
+    if (!acct) return null;
+    const email = acct.primaryEmailAddress || acct.mailAddress || acct.incomingUserName || '';
+    return { accountId: acct.accountId, email };
+  } catch(e) { return null; }
 }
 
 async function getAccessToken() {
@@ -908,51 +1070,107 @@ async function getAccessToken() {
   return null;
 }
 
-function setGmailConnected(email) {
+async function getZohoAccessToken() {
+  const token  = localStorage.getItem('sytesurge_zohoAccessToken');
+  const expiry = parseInt(localStorage.getItem('sytesurge_zohoTokenExpiry') || '0');
+  if (token && Date.now() < expiry) return token;
+
+  const refresh   = localStorage.getItem('sytesurge_zohoRefreshToken');
+  const clientId  = localStorage.getItem('sytesurge_zohoClientId');
+  const clientSecret = localStorage.getItem('sytesurge_zohoClientSecret') || '';
+  if (!refresh || !clientId) return null;
+  try {
+    const refreshParams = { grant_type:'refresh_token', refresh_token:refresh, client_id:clientId, client_secret:clientSecret };
+    const r = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(refreshParams)
+    });
+    const d = await r.json();
+    if (d.access_token) {
+      localStorage.setItem('sytesurge_zohoAccessToken', d.access_token);
+      localStorage.setItem('sytesurge_zohoTokenExpiry', Date.now() + (d.expires_in-60)*1000);
+      return d.access_token;
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ---- Provider-agnostic connection UI ----
+function hasProviderToken(provider) {
+  provider = provider || getProvider();
+  return provider === 'zoho'
+    ? !!(localStorage.getItem('sytesurge_zohoRefreshToken') && localStorage.getItem('sytesurge_zohoAccountId'))
+    : !!localStorage.getItem('sytesurge_refreshToken');
+}
+function getConnectedEmailAddress() {
+  const provider = getProvider();
+  const email = provider === 'zoho'
+    ? localStorage.getItem('sytesurge_zohoEmail')
+    : localStorage.getItem('sytesurge_email');
+  return email || 'info@sytesurge.com';
+}
+function connectEmail() { getProvider() === 'zoho' ? startZohoOAuth() : startOAuth(); }
+function disconnectEmail() { getProvider() === 'zoho' ? disconnectZoho() : disconnectGmail(); refreshConnectedUI(); }
+
+function onProviderChange() {
+  setProvider(document.getElementById('emailProvider').value);
+  refreshConnectedUI();
+}
+
+function refreshConnectedUI() {
+  const provider = getProvider();
+  const sel = document.getElementById('emailProvider');
+  if (sel) sel.value = provider;
   const pill = document.getElementById('gmailConnectedPill');
   const btn  = document.getElementById('btnGmailConnect');
   const disc = document.getElementById('btnGmailDisconnect');
   const lbl  = document.getElementById('senderLabel');
   const banner = document.getElementById('authBanner');
-  if (pill)  { pill.textContent = '✓ ' + email; pill.style.display = 'block'; }
-  if (btn)   btn.style.display = 'none';
-  if (disc)  disc.style.display = 'inline-flex';
-  if (lbl)   { lbl.textContent = email; lbl.style.color = 'var(--accent3)'; }
-  if (banner) banner.classList.remove('show');
-}
+  const bannerText = document.getElementById('authBannerText');
+  const providerLabel = provider === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  if (btn) btn.textContent = '🔐 Connect ' + providerLabel;
 
-function checkGmailStatus() {
-  const email = localStorage.getItem('sytesurge_email');
-  const token = localStorage.getItem('sytesurge_accessToken');
-  const expiry = parseInt(localStorage.getItem('sytesurge_tokenExpiry')||'0');
-  const banner = document.getElementById('authBanner');
-  if (email && token && Date.now() < expiry + 7*24*3600*1000) {
-    setGmailConnected(email);
+  const connected = hasProviderToken(provider);
+  if (connected) {
+    const email = getConnectedEmailAddress();
+    if (pill)  { pill.textContent = '✓ ' + email; pill.style.display = 'block'; }
+    if (btn)   btn.style.display = 'none';
+    if (disc)  disc.style.display = 'inline-flex';
+    if (lbl)   { lbl.textContent = email; lbl.style.color = 'var(--accent3)'; }
+    if (banner) banner.classList.remove('show');
   } else {
+    if (pill)  pill.style.display = 'none';
+    if (btn)   btn.style.display = 'inline-flex';
+    if (disc)  disc.style.display = 'none';
+    if (lbl)   lbl.textContent = 'Not connected';
+    if (bannerText) bannerText.querySelector('strong').textContent = 'Connect ' + providerLabel + ' to send real emails';
     if (banner) banner.classList.add('show');
   }
+  renderComplianceChecklist();
 }
+// Backward-compatible alias used elsewhere in the app
+function checkGmailStatus() { refreshConnectedUI(); }
 
 function disconnectGmail() {
   ['sytesurge_accessToken','sytesurge_tokenExpiry','sytesurge_refreshToken','sytesurge_email'].forEach(k => localStorage.removeItem(k));
-  document.getElementById('gmailConnectedPill').style.display = 'none';
-  document.getElementById('btnGmailConnect').style.display = 'inline-flex';
-  document.getElementById('btnGmailDisconnect').style.display = 'none';
-  document.getElementById('senderLabel').textContent = 'Not connected';
-  document.getElementById('authBanner').classList.add('show');
   toast('Gmail disconnected');
+}
+function disconnectZoho() {
+  ['sytesurge_zohoAccessToken','sytesurge_zohoTokenExpiry','sytesurge_zohoRefreshToken','sytesurge_zohoEmail','sytesurge_zohoAccountId','sytesurge_zohoInboxFolderId'].forEach(k => localStorage.removeItem(k));
+  toast('Zoho Mail disconnected');
 }
 
 // ============================================================
-//  REAL GMAIL SEND
+//  REAL EMAIL SEND — Gmail or Zoho Mail, verified before reporting success
 // ============================================================
+// Both return { ok: boolean, error: string|null } — never a bare boolean —
+// so the campaign loop can only mark a lead 'sent' when the provider's API
+// actually confirmed it, not just because the HTTP call didn't throw.
 async function sendGmail(to, subject, bodyHtml) {
   const token = await getAccessToken();
-  if (!token) {
-    log('emailLog', '✗ Not connected to Gmail. Click Connect Gmail.', 'err');
-    return false;
-  }
-  const from = localStorage.getItem('sytesurge_email') || 'info@sytesurge.com';
+  if (!token) return { ok:false, error:'Not connected to Gmail. Click Connect in the header.' };
+  const from = getConnectedEmailAddress();
   const raw = [
     `From: Sytesurge <${from}>`, `To: ${to}`, `Subject: ${subject}`,
     'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', bodyHtml
@@ -965,16 +1183,46 @@ async function sendGmail(to, subject, bodyHtml) {
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ raw: encoded })
     });
-    if (!r.ok) {
-      const e = await r.json();
-      log('emailLog', '✗ Gmail error: ' + (e.error?.message || r.status), 'err');
-      return false;
+    const d = await r.json().catch(()=>({}));
+    // Only trust success when Gmail hands back the sent message's id — a 200
+    // with no id is not proof it actually sent.
+    if (!r.ok || !d.id) {
+      return { ok:false, error: d.error?.message || ('Gmail returned HTTP ' + r.status + ' with no message id') };
     }
-    return true;
+    return { ok:true, error:null };
   } catch(e) {
-    log('emailLog', '✗ Network error: ' + e.message, 'err');
-    return false;
+    return { ok:false, error:'Network error: ' + e.message };
   }
+}
+
+async function sendZoho(to, subject, bodyHtml) {
+  const token = await getZohoAccessToken();
+  if (!token) return { ok:false, error:'Not connected to Zoho Mail. Click Connect in the header.' };
+  const accountId = localStorage.getItem('sytesurge_zohoAccountId');
+  const from = getConnectedEmailAddress();
+  if (!accountId) return { ok:false, error:'No Zoho account ID on file — disconnect and reconnect Zoho Mail.' };
+  try {
+    const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Zoho-oauthtoken ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromAddress: from, toAddress: to, subject, content: bodyHtml, mailFormat: 'html' })
+    });
+    const d = await r.json().catch(()=>({}));
+    // Zoho's success envelope is {status:{code:200,...}, data:{messageId,...}}.
+    // Require BOTH an ok HTTP status and a Zoho-reported success code — an
+    // HTTP 200 wrapping a non-200 status.code is still a failed send.
+    const zohoOk = r.ok && (d.status?.code === 200 || d.data?.messageId);
+    if (!zohoOk) {
+      return { ok:false, error: d.status?.description || d.data?.errorMessage || ('Zoho returned HTTP ' + r.status) };
+    }
+    return { ok:true, error:null };
+  } catch(e) {
+    return { ok:false, error:'Network error (possibly CORS — check the CORS Domains setting in the Zoho API Console): ' + e.message };
+  }
+}
+
+async function sendEmail(to, subject, bodyHtml) {
+  return getProvider() === 'zoho' ? sendZoho(to, subject, bodyHtml) : sendGmail(to, subject, bodyHtml);
 }
 
 // ============================================================
@@ -1418,7 +1666,7 @@ function getEmail(biz) {
   let body = document.getElementById('emailBody').value;
   const yourName = document.getElementById('cfg-yourname')?.value?.trim() || localStorage.getItem('sytesurge_yourname') || '[Your Name]';
   const bizAddr  = document.getElementById('cfg-address')?.value?.trim()  || localStorage.getItem('sytesurge_address') || '';
-  const fromEmail = localStorage.getItem('sytesurge_email') || 'info@sytesurge.com';
+  const fromEmail = getConnectedEmailAddress();
   const vars = {
     '{{business_name}}': biz.name, '{{owner_name}}': 'Business Owner', '{{category}}': biz.cat,
     '{{city}}': biz.addr?.split(',')[1]?.trim()||'your area',
@@ -1457,7 +1705,8 @@ async function startCampaign() {
   if (!pending.length) return toast('No pending emails');
   const mode = document.getElementById('sendMode').value;
   const delay = parseInt(document.getElementById('emailDelay').value)*1000;
-  if (mode==='live' && !localStorage.getItem('sytesurge_accessToken')) return toast('Connect Gmail first — click Connect Gmail in the header');
+  const providerLabel = getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  if (mode==='live' && !hasProviderToken()) return toast('Connect ' + providerLabel + ' first — click Connect in the header');
 
   state.abort.campaign = false;
   setRunning('campaign', true);
@@ -1473,7 +1722,7 @@ async function startCampaign() {
     return;
   }
 
-  let sent=0, errs=0;
+  let sent=0, errs=0, simulated=0;
   for (let i=0; i<pending.length && !state.abort.campaign; i++) {
     const lead = pending[i];
 
@@ -1497,21 +1746,30 @@ async function startCampaign() {
     updateFloat(`${i+1}/${pending.length}`);
 
     if (mode==='live') {
-      const ok = await sendGmail(lead.email, subject, body);
+      // sendEmail() only returns ok:true when the provider's API confirmed the
+      // send (a real message id / success code) — never assume success just
+      // because the network call didn't throw.
+      const { ok, error } = await sendEmail(lead.email, subject, body);
       lead.status = ok ? 'sent' : 'error';
-      if (ok) { sent++; markContacted(lead); log('emailLog',`✓ Sent → ${lead.email}`,'ok'); }
-      else     { errs++; log('emailLog',`✗ Failed → ${lead.email}`,'err'); }
+      if (ok) { sent++; markContacted(lead); log('emailLog',`✓ Verified sent (${providerLabel}) → ${lead.email}`,'ok'); }
+      else     { errs++; log('emailLog',`✗ Failed → ${lead.email}: ${error||'unknown error'}`,'err'); }
       await sleep(delay);
     } else {
+      // TEST MODE — nothing is transmitted anywhere. Status is deliberately
+      // NOT 'sent' so it can never be mistaken for a real send in the UI or stats.
       await sleep(800);
-      lead.status='sent'; sent++;
-      log('emailLog',`[TEST] Sent → ${lead.email} | Subject: ${subject}`,'info');
+      lead.status='simulated'; simulated++;
+      log('emailLog',`🧪 SIMULATED (not sent) → ${lead.email} | Subject: ${subject}`,'info');
     }
     lead.sentAt = new Date().toLocaleTimeString();
     renderCampaign(); updateEmailStats();
   }
   setRunning('campaign',false); hideFloat(); updateCounts();
-  toast(state.abort.campaign ? `Stopped. Sent ${sent}, ${errs} errors.` : `Campaign done. Sent ${sent}${errs?', '+errs+' errors':''} ✓`);
+  if (mode==='live') {
+    toast(state.abort.campaign ? `Stopped. Sent ${sent}, ${errs} errors.` : `Campaign done. Verified sent: ${sent}${errs?', '+errs+' failed':''} ✓`);
+  } else {
+    toast(`🧪 Test run complete — ${simulated} simulated, 0 real emails sent. Switch to Live to actually send.`);
+  }
 }
 
 function updateEmailStats() {
@@ -1530,7 +1788,7 @@ function renderCampaign() {
   tb.innerHTML=state.campaign.map(c=>`<tr>
     <td style="font-weight:600">${c.name}</td>
     <td style="font-family:'DM Mono',monospace;font-size:11px">${c.email}</td>
-    <td><span class="sdot ${c.status==='sent'?'s-sent':c.status==='error'?'s-error':'s-pending'}"></span>${c.status}</td>
+    <td><span class="sdot ${c.status==='sent'?'s-sent':c.status==='error'?'s-error':c.status==='simulated'?'s-sim':'s-pending'}"></span>${c.status==='simulated'?'simulated (not sent)':c.status}</td>
     <td style="font-size:11px;color:var(--muted)">${c.sentAt||'—'}</td>
     <td><button class="btn btn-danger btn-sm" onclick="removeCampaign('${c.id}')">✕</button></td>
   </tr>`).join('');
@@ -1553,57 +1811,141 @@ const SAMPLE_REPLIES = [
   {from:"Paws & Claws Pet Shop",email:"pawsclawsnj@gmail.com",text:"Really interesting. We've lost customers because people can't find our hours online. What do you need from us to get started?"},
 ];
 
-async function fetchReplies() {
+// Negation-aware unsubscribe detection: catches common opt-out phrasing while
+// not flagging things like "please DON'T remove me, I'm interested!"
+function looksLikeUnsubscribe(text) {
+  const t = (text||'').toLowerCase();
+  const negations = ["don't remove","do not remove","don't unsubscribe","do not unsubscribe",
+    "please don't take me off","not unsubscribing","never mind, don't"];
+  if (negations.some(n => t.includes(n))) return false;
+  const keywords = ['unsubscribe','remove me','stop emailing','take me off','opt out','opt-out',
+    'do not contact','remove from your list','remove from your mailing','stop contacting'];
+  return keywords.some(k => t.includes(k));
+}
+
+async function fetchZohoInboxFolderId(accountId, token) {
+  const cached = localStorage.getItem('sytesurge_zohoInboxFolderId');
+  if (cached) return cached;
+  const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/folders`, {
+    headers: { Authorization: 'Zoho-oauthtoken ' + token }
+  });
+  const d = await r.json();
+  const folders = d.data || [];
+  const inbox = folders.find(f => f.folderType === 'Inbox') || folders.find(f => (f.path||'').toLowerCase() === '/inbox') || folders[0];
+  if (!inbox) throw new Error('Could not find an Inbox folder in this Zoho account');
+  localStorage.setItem('sytesurge_zohoInboxFolderId', inbox.folderId);
+  return inbox.folderId;
+}
+
+async function fetchReplies(silent) {
+  if (state.running.replies) return; // don't overlap a manual click with a background poll
   state.abort.replies = false;
   setRunning('replies', true);
-  showFloat('Fetching & analyzing replies...','');
+  if (!silent) showFloat('Fetching & analyzing replies...','');
 
-  const token = localStorage.getItem('sytesurge_accessToken');
+  const provider = getProvider();
   let messages = [];
+  let usedDemoData = false, demoReason = '';
 
-  if (token) {
-    // Real Gmail fetch
-    try {
-      const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox&maxResults=20', {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      const d = await r.json();
-      if (d.messages) {
-        for (const m of d.messages.slice(0,12)) {
-          if (state.abort.replies) break;
-          const det = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, {
-            headers: { Authorization: 'Bearer ' + token }
-          }).then(x=>x.json());
-          const hdrs = det.payload?.headers||[];
-          const from = hdrs.find(h=>h.name==='From')?.value||'Unknown';
-          messages.push({ from: from.split('<')[0].trim().replace(/"/g,''), email: from.match(/<(.+)>/)?.[1]||from, text: det.snippet||'' });
+  if (provider === 'zoho') {
+    const token = await getZohoAccessToken();
+    const accountId = localStorage.getItem('sytesurge_zohoAccountId');
+    if (token && accountId) {
+      try {
+        const folderId = await fetchZohoInboxFolderId(accountId, token);
+        const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/messages/view?folderId=${folderId}&limit=20&start=1`, {
+          headers: { Authorization: 'Zoho-oauthtoken ' + token }
+        });
+        const d = await r.json();
+        for (const m of (d.data || [])) {
+          const fromRaw = m.fromAddress || m.sender || 'Unknown';
+          messages.push({
+            from: fromRaw.split('<')[0].trim().replace(/"/g,'') || fromRaw,
+            email: fromRaw.match(/<(.+)>/)?.[1] || fromRaw,
+            text: m.summary || m.subject || ''
+          });
         }
+      } catch(e) {
+        usedDemoData = true; demoReason = 'Zoho fetch failed: ' + e.message;
+        messages = SAMPLE_REPLIES.slice(0,5);
       }
-    } catch(e) { messages = SAMPLE_REPLIES.slice(0,5); }
+    } else {
+      usedDemoData = true; demoReason = 'Zoho Mail not connected';
+      messages = SAMPLE_REPLIES.slice(0, 4+Math.floor(Math.random()*4));
+    }
   } else {
-    messages = SAMPLE_REPLIES.slice(0, 4+Math.floor(Math.random()*4));
+    const token = await getAccessToken();
+    if (token) {
+      try {
+        const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox&maxResults=20', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const d = await r.json();
+        if (d.messages) {
+          for (const m of d.messages.slice(0,12)) {
+            if (state.abort.replies) break;
+            const det = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, {
+              headers: { Authorization: 'Bearer ' + token }
+            }).then(x=>x.json());
+            const hdrs = det.payload?.headers||[];
+            const from = hdrs.find(h=>h.name==='From')?.value||'Unknown';
+            messages.push({ from: from.split('<')[0].trim().replace(/"/g,''), email: from.match(/<(.+)>/)?.[1]||from, text: det.snippet||'' });
+          }
+        }
+      } catch(e) {
+        usedDemoData = true; demoReason = 'Gmail fetch failed: ' + e.message;
+        messages = SAMPLE_REPLIES.slice(0,5);
+      }
+    } else {
+      usedDemoData = true; demoReason = 'Gmail not connected';
+      messages = SAMPLE_REPLIES.slice(0, 4+Math.floor(Math.random()*4));
+    }
   }
 
+  if (usedDemoData) {
+    console.warn('Replies tab is showing SAMPLE data, not your real inbox:', demoReason);
+    if (!silent) toast('⚠️ Showing demo replies — ' + demoReason);
+  }
+
+  let newUnsubCount = 0;
   for (let i=0; i<messages.length && !state.abort.replies; i++) {
     const msg = messages[i];
     if (state.replies.find(r=>r.email===msg.email)) continue;
     await sleep(300+Math.random()*500);
     if (state.abort.replies) break;
-    updateFloat(`${i+1}/${messages.length}`);
+    if (!silent) updateFloat(`${i+1}/${messages.length}`);
     const score = await scoreReply(msg.text);
     // Auto-detect unsubscribe requests and add to suppression list
-    const unsubKeywords = ['unsubscribe','remove me','stop emailing','take me off','opt out','do not contact','remove from'];
-    const isUnsub = unsubKeywords.some(k => msg.text.toLowerCase().includes(k));
+    const isUnsub = looksLikeUnsubscribe(msg.text);
     if (isUnsub) {
       addToSuppressionList(msg.email);
       score.score = 0; score.reason = 'Unsubscribe request detected — contact suppressed automatically.'; score.sentiment = 'very_negative';
+      newUnsubCount++;
     }
-    state.replies.push({...msg, score, unsubscribed: isUnsub, at: new Date().toLocaleTimeString()});
+    state.replies.push({...msg, score, unsubscribed: isUnsub, demo: usedDemoData, at: new Date().toLocaleTimeString()});
     renderReplies(); updateReplyStats(); updateCounts();
   }
 
-  setRunning('replies',false); hideFloat();
-  toast(`Analyzed ${state.replies.length} replies ✓`);
+  setRunning('replies',false);
+  if (!silent) { hideFloat(); toast(`Analyzed ${state.replies.length} replies ✓`); }
+  else if (newUnsubCount > 0) { toast(`🔁 Auto-check found ${newUnsubCount} new unsubscribe request(s) — suppressed automatically.`); }
+}
+
+// ---- Auto-check for replies (only runs while this browser tab stays open) ----
+function toggleAutoReplyCheck() {
+  const on = document.getElementById('autoReplyToggle').checked;
+  localStorage.setItem('sytesurge_autoReply', on ? '1' : '0');
+  if (on) startAutoReplyPolling(); else stopAutoReplyPolling();
+  renderComplianceChecklist();
+}
+function startAutoReplyPolling() {
+  stopAutoReplyPolling();
+  autoReplyTimer = setInterval(() => {
+    if (!state.running.replies && hasProviderToken()) fetchReplies(true);
+  }, 10*60*1000);
+}
+function stopAutoReplyPolling() {
+  if (autoReplyTimer) { clearInterval(autoReplyTimer); autoReplyTimer = null; }
 }
 
 async function scoreReply(text) {
@@ -1652,7 +1994,7 @@ function renderReplies() {
     const em=s>=80?'🔥':s>=50?'🌡':'❄️';
     return `<div class="reply-card">
       <div class="reply-header">
-        <div><div class="reply-from">${em} ${r.from}</div><div class="reply-email">${r.email} · ${r.at}</div></div>
+        <div><div class="reply-from">${em} ${r.from}${r.demo?' <span style="font-size:9px;background:var(--accent4);color:#000;padding:1px 6px;border-radius:8px;vertical-align:middle">DEMO — NOT REAL INBOX</span>':''}</div><div class="reply-email">${r.email} · ${r.at}</div></div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="score ${sc}">${s}%</span>
           <button class="btn btn-primary btn-sm" onclick="genReplyMockup('${r.email}')">🎨 Mockup</button>
@@ -1802,6 +2144,7 @@ function stopProcess(key){ state.abort[key]=true; toast('Stopping '+key+'...'); 
 function stopAll(){ Object.keys(state.abort).forEach(k=>state.abort[k]=true); ['scan','campaign','replies','mockups'].forEach(k=>setRunning(k,false)); hideFloat(); document.getElementById('btnStopAll').style.display='none'; document.getElementById('globalStatus').textContent='● Idle'; toast('⏹ All processes stopped'); }
 
 function setRunning(key, on) {
+  if (state.running && key in state.running) state.running[key] = on;
   const map={scan:['btnScan','btnStopScan','scanProgress'],campaign:['btnSend','btnStopSend','sendProgress'],replies:['btnFetchReplies','btnStopReplies',null],mockups:['btnGenMock','btnStopMock','mockProgress']};
   const [start,stop,prog]=map[key]||[];
   if(start){const e=document.getElementById(start);if(e)e.disabled=on;}
@@ -1865,16 +2208,18 @@ document.getElementById('mockModal').addEventListener('click',function(e){if(e.t
 function renderComplianceChecklist() {
   const addr = document.getElementById('cfg-address')?.value?.trim() || localStorage.getItem('sytesurge_cfg-address') || '';
   const name = document.getElementById('cfg-yourname')?.value?.trim() || localStorage.getItem('sytesurge_cfg-yourname') || '';
-  const gmail = localStorage.getItem('sytesurge_email') || '';
+  const providerLabel = getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  const emailConnected = hasProviderToken();
+  const autoOn = localStorage.getItem('sytesurge_autoReply') === '1';
   const unsub = getSuppressionList().length;
   const items = [
     { ok: !!addr, label: 'Physical business address set', fix: 'Fill in Business Address in config bar' },
     { ok: !!name, label: 'Your name set for email signature', fix: 'Fill in Your Name in config bar' },
-    { ok: !!gmail, label: 'Gmail account connected', fix: 'Click Connect Gmail in the header' },
+    { ok: emailConnected, label: providerLabel + ' account connected', fix: 'Click Connect in the header' },
     { ok: true,   label: 'Unsubscribe instructions in every email footer', fix: '' },
     { ok: true,   label: 'Suppression list blocks unsubscribed contacts', fix: '' },
     { ok: true,   label: 'Emails identified as commercial messages', fix: '' },
-    { ok: true,   label: 'Auto-detection of unsubscribe replies', fix: '' },
+    { ok: autoOn, label: 'Auto-check for unsubscribe replies (Replies tab)', fix: 'Turn on "Auto-check every 10 min" in the Replies tab' },
   ];
   const el = document.getElementById('complianceChecklist');
   if (!el) return;
