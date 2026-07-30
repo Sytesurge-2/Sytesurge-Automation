@@ -1319,10 +1319,13 @@ function setLeadFilter(el,v){ document.querySelectorAll('#panel-scan .chip').for
 
 function exportLeads() {
   if (!state.leads.length) return toast('No leads');
+  const sel = state.leads.filter(l => l.selected);
+  if (!sel.length) return toast('Check the boxes for the leads you want, then Export');
   const csv = ['Name,Cat,Address,Email,Phone,Website,Rating,Est_Loss/yr,Reason']
-    .concat(state.leads.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
+    .concat(sel.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
     .join('\n');
   dl(csv,'sytesurge_leads.csv');
+  toast(`Exported ${sel.length} selected lead(s) ✓`);
 }
 function clearLeads(){ if(!confirm('Clear all leads?'))return; state.leads=[]; renderLeads(); updateScanStats(); updateCounts(); }
 
