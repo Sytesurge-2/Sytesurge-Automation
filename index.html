@@ -248,7 +248,7 @@ td{padding:9px 12px;vertical-align:middle}
 <!-- ======= SCANNER ======= -->
 <div class="panel active" id="panel-scan">
   <div class="section-header">
-    <div><div class="section-title">Business Scanner</div><div class="section-sub">Live data from OpenStreetMap — real local businesses, filtered to those with no website</div></div>
+    <div><div class="section-title">Business Scanner</div><div class="section-sub">Live data from OpenStreetMap — find local businesses to pitch a new or redesigned website</div></div>
   </div>
   <div class="stats-row">
     <div class="stat-card a1"><div class="stat-num" id="s-found">0</div><div class="stat-label">LEADS FOUND</div></div>
@@ -278,7 +278,8 @@ td{padding:9px 12px;vertical-align:middle}
       </div>
     </div>
     <div class="tog-row"><button class="tog" id="tog-gmail" onclick="this.classList.toggle('on')"></button><span class="tog-lbl">Has public email only</span>
-      <button class="tog on" id="tog-noweb" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">No website only</span>
+      <button class="tog on" id="tog-hasweb" onclick="if(this.classList.toggle('on'))document.getElementById('tog-noweb').classList.remove('on')" style="margin-left:12px"></button><span class="tog-lbl">Has a website (redesign leads)</span>
+      <button class="tog" id="tog-noweb" onclick="if(this.classList.toggle('on'))document.getElementById('tog-hasweb').classList.remove('on')" style="margin-left:12px"></button><span class="tog-lbl">No website only</span>
       <button class="tog" id="tog-phone" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Must have phone</span>
       <button class="tog on" id="tog-contacted" onclick="this.classList.toggle('on')" style="margin-left:12px"></button><span class="tog-lbl">Hide already-emailed</span>
     </div>
@@ -340,7 +341,7 @@ td{padding:9px 12px;vertical-align:middle}
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>Template Editor</div>
       <div class="field" style="margin-bottom:10px"><label>SUBJECT LINE</label>
-        <input id="emailSubject" value="Your business deserves to be found online, {{business_name}}" style="width:100%">
+        <input id="emailSubject" value="A fresh look for {{business_name}}'s website" style="width:100%">
       </div>
       <div style="margin-bottom:8px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px">CLICK TO INSERT VARIABLE:</div>
@@ -356,15 +357,15 @@ td{padding:9px 12px;vertical-align:middle}
       <div class="field"><label>BODY (HTML supported)</label>
         <textarea id="emailBody" style="width:100%;min-height:250px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6">Hi {{owner_name}},
 
-I came across {{business_name}} and wanted to reach out — you're running a great {{category}} business in {{city}}, but I noticed you don't currently have a website.
+I came across {{business_name}} online — you're running a great {{category}} business in {{city}}. I took a look at your current website, and I think a modern refresh could really help it win more customers (faster load, mobile-friendly, easier to update).
 
-Businesses without a website lose an estimated <strong>{{est_loss}} per year</strong> in revenue from customers who search online and can't find them.
+An outdated or hard-to-use site quietly costs local businesses an estimated <strong>{{est_loss}} per year</strong> — visitors who leave before they ever call or book.
 
 At Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.
 
-We'd love to show you a <strong>free mockup</strong> of what your site could look like. No commitment.
+I'd love to show you a <strong>free mockup</strong> of a redesigned version of your site. No commitment.
 
-Reply anytime or give us a call.
+Reply anytime — happy to send it over.
 
 Best,
 [Your Name]
@@ -1121,6 +1122,7 @@ async function startScan() {
   const radius  = parseInt(document.getElementById('scanRadius').value) || 10000;
   const catWant = document.getElementById('scanCat').value;
   const noWebOnly = document.getElementById('tog-noweb').classList.contains('on'); // toggle ON = "no website only"
+  const hasWebOnly = document.getElementById('tog-hasweb').classList.contains('on'); // toggle ON = "has a website" (redesign leads)
   const emailOnly = document.getElementById('tog-gmail').classList.contains('on');
   const phoneOnly = document.getElementById('tog-phone').classList.contains('on');
   const hideContacted = document.getElementById('tog-contacted').classList.contains('on');
@@ -1200,6 +1202,7 @@ async function startScan() {
 
       // filters
       if (noWebOnly && hasWebsite) continue;
+      if (hasWebOnly && !hasWebsite) continue;   // redesign leads: keep only businesses that already have a site
       if (emailOnly && !email) continue;
       if (phoneOnly && !phone) continue;
       if (catWant !== 'all' && cat !== catWant) continue;
@@ -1296,7 +1299,7 @@ function renderLeads() {
   tbody.innerHTML = list.map(l=>`
     <tr>
       <td><input type="checkbox" ${l.selected?'checked':''} onchange="toggleLead('${l.id}',this.checked)"></td>
-      <td style="font-weight:600">${l.name}</td>
+      <td style="font-weight:600">${l.name}${l.website?`<br><a href="${(l.website.startsWith('http')?l.website:'https://'+l.website)}" target="_blank" rel="noopener" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent2);font-weight:400">🔗 view current site</a>`:''}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${l.cat}</span></td>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email || '<span style="color:var(--muted)">— no email —</span>'}</td>
       <td style="font-size:11px">${l.phone || '<span style="color:var(--muted)">—</span>'}</td>
@@ -1444,7 +1447,7 @@ function insertVar(v){ const ta=document.getElementById('emailBody'); const s=ta
 function previewEmail(){ const b=state.campaign[0]||state.leads[0]; if(!b)return toast('No leads'); const {subject,body}=getEmail(b); const w=window.open('','_blank','width=680,height=580'); w.document.write(`<html><head><style>body{font-family:Arial;max-width:600px;margin:32px auto;padding:16px;color:#333}</style></head><body><h3>Subject: ${subject}</h3><hr>${body}</body></html>`); }
 function saveTemplate(){ localStorage.setItem('tmpl_subj',document.getElementById('emailSubject').value); localStorage.setItem('tmpl_body',document.getElementById('emailBody').value); toast('Template saved ✓'); }
 function loadTemplate(){ const s=localStorage.getItem('tmpl_subj'),b=localStorage.getItem('tmpl_body'); if(s)document.getElementById('emailSubject').value=s; if(b)document.getElementById('emailBody').value=b; toast('Template loaded ✓'); }
-function resetTemplate(){ document.getElementById('emailSubject').value="Your business deserves to be found online, {{business_name}}"; document.getElementById('emailBody').value="Hi {{owner_name}},\n\nI came across {{business_name}} and wanted to reach out — you're running a great {{category}} business in {{city}}, but I noticed you don't currently have a website.\n\nBusinesses without a website lose an estimated <strong>{{est_loss}} per year</strong> in revenue from customers who search online and can't find them.\n\nAt Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.\n\nWe'd love to show you a <strong>free mockup</strong> of what your site could look like. No commitment.\n\nReply anytime or give us a call.\n\nBest,\n[Your Name]\nSytesurge | sytesurge.com\n\n---\nThis is a commercial email. To unsubscribe, reply with UNSUBSCRIBE."; toast('Reset ✓'); }
+function resetTemplate(){ document.getElementById('emailSubject').value="A fresh look for {{business_name}}'s website"; document.getElementById('emailBody').value="Hi {{owner_name}},\n\nI came across {{business_name}} online — you're running a great {{category}} business in {{city}}. I took a look at your current website, and I think a modern refresh could really help it win more customers (faster load, mobile-friendly, easier to update).\n\nAn outdated or hard-to-use site quietly costs local businesses an estimated <strong>{{est_loss}} per year</strong> — visitors who leave before they ever call or book.\n\nAt Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.\n\nI'd love to show you a <strong>free mockup</strong> of a redesigned version of your site. No commitment.\n\nReply anytime — happy to send it over.\n\nBest,\n[Your Name]\nSytesurge | sytesurge.com\n\n---\nThis is a commercial email. To unsubscribe, reply with UNSUBSCRIBE."; toast('Reset ✓'); }
 
 async function startCampaign() {
   const pending = state.campaign.filter(c=>c.status==='pending');
