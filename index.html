@@ -651,10 +651,9 @@ Sytesurge | sytesurge.com</textarea>
       <b style="color:var(--text)">1.</b> Go to <span class="mono">api-console.zoho.com</span> and sign in with the Zoho account that owns the mailbox<br>
       <b style="color:var(--text)">2.</b> Click <b>Add Client</b> → choose <b>Server-based Applications</b><br>
       <b style="color:var(--text)">3.</b> Homepage URL: your dashboard's live URL. Authorized Redirect URI: <span class="mono">your dashboard's live URL</span> (same value as the "Netlify / Cloudflare URL" field below)<br>
-      <b style="color:var(--text)">4.</b> After creating the client, open its <b>Client Secret</b> tab and find <b>CORS Domains</b> — add your dashboard's URL there too. <span style="color:var(--danger)">This step is required</span> — without it, Zoho blocks requests made directly from the browser and sending will fail with a network error.<br>
-      <b style="color:var(--text)">5.</b> Copy the <b>Client ID</b> and <b>Client Secret</b> into the fields below and Save<br>
-      <b style="color:var(--text)">6.</b> Pick <b>Zoho Mail</b> in "SEND VIA" at the top, click <b>Connect</b>, and sign in as <b>info@sytesurge.com</b><br><br>
-      <b style="color:var(--text)">Honest note:</b> this integration is built directly against Zoho's published Mail API, but I can't run a live test of it in this environment. Send yourself a real test email first — if it fails, the exact error from Zoho will show in the campaign log, and that error message is what tells us what to fix.
+      <b style="color:var(--text)">4.</b> Copy the <b>Client ID</b> and <b>Client Secret</b> into the fields below and Save. You do <b>not</b> need to set up "CORS Domains" — this dashboard routes every Zoho request through its own server-side proxy (Netlify Functions), so the browser's CORS restrictions never come into play.<br>
+      <b style="color:var(--text)">5.</b> Pick <b>Zoho Mail</b> in "SEND VIA" at the top, click <b>Connect</b>, and sign in as <b>info@sytesurge.com</b><br><br>
+      <b style="color:var(--text)">Important — this only works if the site is deployed with its Netlify Functions:</b> if your Netlify site is connected to this GitHub repo, the <span class="mono">netlify/functions/</span> folder deploys automatically on every push. If instead you drag-and-drop deployed a folder to Netlify, you'll need to reconnect the site to this GitHub repo (Site settings → Build & deploy → Link repository) or re-upload including the <span class="mono">netlify/functions/</span> folder — otherwise the proxy endpoints won't exist and Connect will fail. You can verify they're live in the Netlify dashboard under your site's <b>Functions</b> tab — you should see <span class="mono">zoho-token</span> and <span class="mono">zoho-mail</span> listed there.
     </div>
     <div class="input-row" style="flex-wrap:nowrap;gap:12px;margin-top:8px">
       <div class="field" style="flex:2">
@@ -1001,14 +1000,12 @@ async function handleZohoCallback(p) {
       code, client_id: clientId, client_secret: clientSecret,
       redirect_uri: redirectUri, grant_type: 'authorization_code'
     };
-    const r = await fetch('https://accounts.zoho.com/oauth/v2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(tokenParams)
-    });
-    const d = await r.json();
+    // Zoho's token endpoint never allows direct browser calls (no CORS
+    // headers, by design) — this goes through our own Netlify Function,
+    // which forwards it server-side where CORS doesn't apply.
+    const d = await zohoToken(tokenParams);
     if (d.error) throw new Error(d.error_description || d.error);
-    if (!d.access_token) throw new Error('Zoho did not return an access token — check Client ID/Secret and that the CORS Domain is set in the Zoho API Console.');
+    if (!d.access_token) throw new Error('Zoho did not return an access token — double-check your Client ID/Secret. Full response: ' + JSON.stringify(d));
 
     localStorage.setItem('sytesurge_zohoAccessToken', d.access_token);
     localStorage.setItem('sytesurge_zohoTokenExpiry', Date.now() + (d.expires_in - 60) * 1000);
@@ -1029,12 +1026,32 @@ async function handleZohoCallback(p) {
   }
 }
 
+// ---- Netlify Function proxies (see netlify/functions/zoho-*.js) ----
+// Both Zoho endpoints are unreachable directly from the browser: the OAuth
+// token endpoint never sends CORS headers, and the Mail API endpoints only
+// allow it if the exact origin is registered in the Zoho API Console. These
+// two functions route every Zoho call through our own serverless proxy
+// instead, which talks to Zoho server-to-server (no CORS involved at all).
+async function zohoToken(fields) {
+  const r = await fetch('/.netlify/functions/zoho-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields)
+  });
+  return r.json();
+}
+async function zohoApi(path, method, token, body) {
+  const r = await fetch('/.netlify/functions/zoho-mail', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, method: method||'GET', token, body })
+  });
+  return r.json();
+}
+
 async function fetchZohoAccountInfo(accessToken) {
   try {
-    const r = await fetch('https://mail.zoho.com/api/accounts', {
-      headers: { Authorization: 'Zoho-oauthtoken ' + accessToken }
-    });
-    const d = await r.json();
+    const d = await zohoApi('/api/accounts', 'GET', accessToken);
     const acct = d.data?.[0];
     if (!acct) return null;
     const email = acct.primaryEmailAddress || acct.mailAddress || acct.incomingUserName || '';
@@ -1081,12 +1098,7 @@ async function getZohoAccessToken() {
   if (!refresh || !clientId) return null;
   try {
     const refreshParams = { grant_type:'refresh_token', refresh_token:refresh, client_id:clientId, client_secret:clientSecret };
-    const r = await fetch('https://accounts.zoho.com/oauth/v2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(refreshParams)
-    });
-    const d = await r.json();
+    const d = await zohoToken(refreshParams);
     if (d.access_token) {
       localStorage.setItem('sytesurge_zohoAccessToken', d.access_token);
       localStorage.setItem('sytesurge_zohoTokenExpiry', Date.now() + (d.expires_in-60)*1000);
@@ -1202,22 +1214,18 @@ async function sendZoho(to, subject, bodyHtml) {
   const from = getConnectedEmailAddress();
   if (!accountId) return { ok:false, error:'No Zoho account ID on file — disconnect and reconnect Zoho Mail.' };
   try {
-    const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/messages`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Zoho-oauthtoken ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fromAddress: from, toAddress: to, subject, content: bodyHtml, mailFormat: 'html' })
-    });
-    const d = await r.json().catch(()=>({}));
+    const d = await zohoApi(`/api/accounts/${accountId}/messages`, 'POST', token,
+      { fromAddress: from, toAddress: to, subject, content: bodyHtml, mailFormat: 'html' });
     // Zoho's success envelope is {status:{code:200,...}, data:{messageId,...}}.
-    // Require BOTH an ok HTTP status and a Zoho-reported success code — an
-    // HTTP 200 wrapping a non-200 status.code is still a failed send.
-    const zohoOk = r.ok && (d.status?.code === 200 || d.data?.messageId);
+    // Require a Zoho-reported success code — a 200 from our own proxy just
+    // means the proxy ran, not that Zoho itself accepted the send.
+    const zohoOk = d.status?.code === 200 || d.data?.messageId;
     if (!zohoOk) {
-      return { ok:false, error: d.status?.description || d.data?.errorMessage || ('Zoho returned HTTP ' + r.status) };
+      return { ok:false, error: d.status?.description || d.data?.errorMessage || d.error_description || ('Zoho did not confirm the send: ' + JSON.stringify(d)) };
     }
     return { ok:true, error:null };
   } catch(e) {
-    return { ok:false, error:'Network error (possibly CORS — check the CORS Domains setting in the Zoho API Console): ' + e.message };
+    return { ok:false, error:'Network error: ' + e.message };
   }
 }
 
@@ -1826,10 +1834,7 @@ function looksLikeUnsubscribe(text) {
 async function fetchZohoInboxFolderId(accountId, token) {
   const cached = localStorage.getItem('sytesurge_zohoInboxFolderId');
   if (cached) return cached;
-  const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/folders`, {
-    headers: { Authorization: 'Zoho-oauthtoken ' + token }
-  });
-  const d = await r.json();
+  const d = await zohoApi(`/api/accounts/${accountId}/folders`, 'GET', token);
   const folders = d.data || [];
   const inbox = folders.find(f => f.folderType === 'Inbox') || folders.find(f => (f.path||'').toLowerCase() === '/inbox') || folders[0];
   if (!inbox) throw new Error('Could not find an Inbox folder in this Zoho account');
@@ -1853,10 +1858,7 @@ async function fetchReplies(silent) {
     if (token && accountId) {
       try {
         const folderId = await fetchZohoInboxFolderId(accountId, token);
-        const r = await fetch(`https://mail.zoho.com/api/accounts/${accountId}/messages/view?folderId=${folderId}&limit=20&start=1`, {
-          headers: { Authorization: 'Zoho-oauthtoken ' + token }
-        });
-        const d = await r.json();
+        const d = await zohoApi(`/api/accounts/${accountId}/messages/view?folderId=${folderId}&limit=20&start=1`, 'GET', token);
         for (const m of (d.data || [])) {
           const fromRaw = m.fromAddress || m.sender || 'Unknown';
           messages.push({
