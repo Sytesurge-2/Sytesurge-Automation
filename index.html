@@ -328,10 +328,10 @@ td{padding:9px 12px;vertical-align:middle}
     <div class="table-wrap">
       <table><thead><tr>
         <th><input type="checkbox" id="chkAll" onchange="selectAll(this)"></th>
-        <th>Business</th><th>Category</th><th>Gmail</th><th>Phone</th>
+        <th>Business</th><th>Owner</th><th>Category</th><th>Gmail</th><th>Phone</th>
         <th>Rating</th><th>Est. Loss/yr</th><th>Reason</th><th>Actions</th>
       </tr></thead>
-      <tbody id="leadsBody"><tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>Run a scan to find leads</div></td></tr></tbody></table>
+      <tbody id="leadsBody"><tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div>Run a scan to find leads</div></td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -1526,6 +1526,7 @@ async function startScan() {
 
   let count = 0;
   const seen = new Set();
+  let ownersFound = 0;
 
   if (elements) {
     // ---- REAL DATA PATH ----
@@ -1538,6 +1539,10 @@ async function startScan() {
       const email = t.email || t['contact:email'] || '';
       const phone = t.phone || t['contact:phone'] || t['phone:mobile'] || '';
       const cat   = osmCategory(t);
+      // Best-effort owner/contact name — OSM only occasionally tags this (rare
+      // "owner" or "contact:person" tags on small POIs). Never fabricated: if
+      // none of these exist, it's left blank for you to fill in manually.
+      const owner = t.owner || t['contact:person'] || t['contact:name'] || '';
 
       // filters
       if (noWebOnly && hasWebsite) continue;
@@ -1558,12 +1563,14 @@ async function startScan() {
 
       state.leads.push({
         id: 'l' + count, name, cat, addr, email, phone,
+        owner, ownerSource: owner ? 'osm' : '',
         rating: null,                                   // OSM has no ratings — never fabricated
         website: hasWebsite ? (t.website || t['contact:website']) : '',
         loss: estimateLoss(cat),
         reason: LOSS_REASONS[cat] || 'Lost to online-visible competitors',
         selected: true, status: 'pending', sentAt: null
       });
+      if (owner) ownersFound++;
       count++;
       const pct = 20 + Math.round(count / max * 80);
       setProg('scan', pct, `Found ${count}/${max}`, name);
@@ -1581,6 +1588,7 @@ async function startScan() {
       log('scanLog', 'No matching businesses for these filters. Try turning off "Has public email only" or "No website only".', 'warn');
     }
     log('scanLog', 'Data © OpenStreetMap contributors (ODbL). Ratings unavailable from open data.', 'info');
+    log('scanLog', `👤 OSM listed an owner/contact name for ${ownersFound}/${count} businesses — fill in the rest in the Owner column, or leave blank to use "there" in the greeting.`, ownersFound ? 'ok' : 'info');
   } else {
     // ---- DEMO FALLBACK PATH (clearly labeled) ----
     for (let i = 0; i < max && !state.abort.scan; i++) {
@@ -1592,6 +1600,7 @@ async function startScan() {
       state.leads.push({
         id: 'l' + i, name: seed.name + suffix, cat: seed.cat,
         addr: seed.addr, email: seed.email, phone: seed.phone,
+        owner: '', ownerSource: '',
         rating: +(seed.rating + (Math.random()*.3-.15)).toFixed(1),
         website: '', loss: estimateLoss(seed.cat),
         reason: LOSS_REASONS[seed.cat] || 'Lost to online-visible competitors',
@@ -1634,11 +1643,12 @@ function renderLeads() {
     return 0;
   });
   const tbody = document.getElementById('leadsBody');
-  if (!list.length) { tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>No leads</div></td></tr>'; return; }
+  if (!list.length) { tbody.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div>No leads</div></td></tr>'; return; }
   tbody.innerHTML = list.map(l=>`
     <tr>
       <td><input type="checkbox" ${l.selected?'checked':''} onchange="toggleLead('${l.id}',this.checked)"></td>
       <td style="font-weight:600">${l.name}${l.website?`<br><a href="${(l.website.startsWith('http')?l.website:'https://'+l.website)}" target="_blank" rel="noopener" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent2);font-weight:400">🔗 view current site</a>`:''}</td>
+      <td><input type="text" value="${(l.owner||'').replace(/"/g,'&quot;')}" placeholder="add owner name" oninput="updateLeadOwner('${l.id}',this.value)" style="width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 7px;border-radius:6px;font-size:11px" title="${l.ownerSource==='osm'?'Found in OpenStreetMap data':'Fill in manually — OSM rarely lists a personal name'}"></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${l.cat}</span></td>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email || '<span style="color:var(--muted)">— no email —</span>'}</td>
       <td style="font-size:11px">${l.phone || '<span style="color:var(--muted)">—</span>'}</td>
@@ -1653,6 +1663,14 @@ function renderLeads() {
 }
 
 function toggleLead(id,v){ const l=state.leads.find(x=>x.id===id); if(l){l.selected=v; updateScanStats();} }
+function updateLeadOwner(id,v){
+  const l=state.leads.find(x=>x.id===id); if(!l) return;
+  l.owner = v.trim(); l.ownerSource = 'manual';
+  // Keep the campaign copy of this lead in sync if it's already been added,
+  // so editing the owner name here still reaches the send.
+  const c = state.campaign.find(x=>x.id===id);
+  if (c) { c.owner = l.owner; c.ownerSource = 'manual'; }
+}
 function selectAll(cb){ state.leads.forEach(l=>l.selected=cb.checked); renderLeads(); updateScanStats(); }
 function setLeadFilter(el,v){ document.querySelectorAll('#panel-scan .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); state.leadFilter=v; renderLeads(); }
 
@@ -1660,8 +1678,8 @@ function exportLeads() {
   if (!state.leads.length) return toast('No leads');
   const sel = state.leads.filter(l => l.selected);
   if (!sel.length) return toast('Check the boxes for the leads you want, then Export');
-  const csv = ['Name,Cat,Address,Email,Phone,Website,Rating,Est_Loss/yr,Reason']
-    .concat(sel.map(l=>`"${l.name}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
+  const csv = ['Name,Owner,Cat,Address,Email,Phone,Website,Rating,Est_Loss/yr,Reason']
+    .concat(sel.map(l=>`"${l.name}","${l.owner||''}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
     .join('\n');
   dl(csv,'sytesurge_leads.csv');
   toast(`Exported ${sel.length} selected lead(s) ✓`);
@@ -1706,6 +1724,7 @@ function importLeads(input) {
         web:  col(['website','url','site']),
         rating:col(['rating','stars']),
         reason:col(['reason','note','notes']),
+        owner:col(['owner','owner name','contact','contact name']),
       };
       if (ci.name < 0) { toast('CSV needs a "Name" column'); input.value=''; return; }
       const base = state.leads.length;
@@ -1721,9 +1740,11 @@ function importLeads(input) {
         const email = get(ci.email);
         if (hideContacted && contactedSet.has(contactKey(name, email, addr))) { skipped++; continue; }
         const ratingRaw = get(ci.rating);
+        const ownerVal = get(ci.owner);
         state.leads.push({
           id: 'imp' + (base + added), name, cat, addr,
           email, phone: get(ci.phone), website: get(ci.web),
+          owner: ownerVal, ownerSource: ownerVal ? 'csv' : '',
           rating: ratingRaw ? parseFloat(ratingRaw) : null,
           loss: estimateLoss(cat),
           reason: get(ci.reason) || LOSS_REASONS[cat] || 'Lost to online-visible competitors',
@@ -1759,7 +1780,7 @@ function getEmail(biz) {
   const bizAddr  = document.getElementById('cfg-address')?.value?.trim()  || localStorage.getItem('sytesurge_address') || '';
   const fromEmail = getConnectedEmailAddress();
   const vars = {
-    '{{business_name}}': biz.name, '{{owner_name}}': 'Business Owner', '{{category}}': biz.cat,
+    '{{business_name}}': biz.name, '{{owner_name}}': (biz.owner && biz.owner.trim()) || 'there', '{{category}}': biz.cat,
     '{{city}}': biz.addr?.split(',')[1]?.trim()||'your area',
     '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': (biz.rating==null?'n/a':biz.rating)
   };
