@@ -216,6 +216,7 @@ td{padding:9px 12px;vertical-align:middle}
   <div class="config-field"><label>BUSINESS ADDRESS ⚖️ CAN-SPAM REQUIRED</label><input type="text" id="cfg-address" placeholder="123 Main St, Mendham NJ 07945" style="width:230px;border-color:var(--accent4)"></div>
   <div class="config-field"><label>SEND VIA</label>
     <select id="emailProvider" onchange="onProviderChange()" style="width:110px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px">
+      <option value="resend">Resend</option>
       <option value="gmail">Gmail</option>
       <option value="zoho">Zoho Mail</option>
     </select>
@@ -645,6 +646,31 @@ Sytesurge | sytesurge.com</textarea>
   </div>
 
   <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>Resend Setup — recommended, free, no logo</div>
+    <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
+      This is the recommended sender. Resend's free tier sends <b style="color:var(--text)">3,000 emails/month (100/day)</b> with <b style="color:var(--text)">no branding or logo</b> on your emails, and needs no credit card. The API key stays on the server (Netlify), never in this page.<br><br>
+      <b style="color:var(--text)">1.</b> Sign up at <span class="mono">resend.com</span><br>
+      <b style="color:var(--text)">2.</b> Go to <b>Domains → Add Domain</b> and enter <span class="mono">sytesurge.com</span><br>
+      <b style="color:var(--text)">3.</b> Resend shows a set of DNS records (MX + TXT for SPF and DKIM). Add each one in <b>Cloudflare → DNS</b> for sytesurge.com, then click <b>Verify</b> in Resend. Takes a few minutes.<br>
+      <b style="color:var(--text)">4.</b> Go to <b>API Keys → Create API Key</b>, copy the key (starts with <span class="mono">re_</span>).<br>
+      <b style="color:var(--text)">5.</b> In <b>Netlify → Site settings → Environment variables</b>, add a variable named <span class="mono">RESEND_API_KEY</span> with that key as the value. Redeploy the site.<br>
+      <b style="color:var(--text)">6.</b> Pick <b>Resend</b> in "SEND VIA" at the top. No Connect step needed — it's ready.<br><br>
+      <b style="color:var(--text)">The from-address below must be on your verified domain</b> (e.g. <span class="mono">info@sytesurge.com</span> or <span class="mono">Sytesurge &lt;info@sytesurge.com&gt;</span>). Sending from an unverified domain will be rejected by Resend.<br><br>
+      <b style="color:var(--text)">Requires the Netlify function to be deployed:</b> the <span class="mono">netlify/functions/resend-send.js</span> file must be in your repo. If your Netlify site is linked to this GitHub repo it deploys automatically on push. You can confirm it's live under your site's <b>Functions</b> tab — you should see <span class="mono">resend-send</span> listed.
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>FROM ADDRESS (must be on your Resend-verified domain)</label>
+      <input id="cfg-resendFrom" placeholder="Sytesurge <info@sytesurge.com>" style="width:100%;font-family:'DM Mono',monospace;font-size:11px">
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveResendFrom()">💾 Save From Address</button>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:rgba(67,233,123,.07);border:1px solid rgba(67,233,123,.2);border-radius:8px;font-size:12px;color:var(--accent3)">
+      ✅ The API key lives only in Netlify's environment variables — it is never exposed in this page or shipped to any client's browser.
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Zoho Mail Setup — for info@sytesurge.com</div>
     <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
       Use this if you actually send from a <b style="color:var(--text)">Zoho Mail</b> inbox (like <b style="color:var(--text)">info@sytesurge.com</b>) — the Gmail card above won't work for that address.<br><br>
@@ -739,7 +765,7 @@ let autoReplyTimer = null;
 // ============================================================
 //  EMAIL PROVIDER (Gmail or Zoho Mail)
 // ============================================================
-function getProvider() { return localStorage.getItem('sytesurge_provider') || 'gmail'; }
+function getProvider() { return localStorage.getItem('sytesurge_provider') || 'resend'; }
 function setProvider(p) { localStorage.setItem('sytesurge_provider', p); }
 
 // ============================================================
@@ -837,6 +863,8 @@ function loadConfig() {
   if (zcid) { const el = document.getElementById('cfg-zohoClientId'); if(el) el.value = zcid; }
   const zsec = localStorage.getItem('sytesurge_zohoClientSecret');
   if (zsec) { const el = document.getElementById('cfg-zohoClientSecret'); if(el) el.value = zsec; }
+  const rFrom = localStorage.getItem('sytesurge_resendFrom');
+  if (rFrom) { const el = document.getElementById('cfg-resendFrom'); if(el) el.value = rFrom; }
   const autoOn = localStorage.getItem('sytesurge_autoReply') === '1';
   const autoEl = document.getElementById('autoReplyToggle');
   if (autoEl) autoEl.checked = autoOn;
@@ -871,6 +899,17 @@ function saveZohoClientId() {
     const gEl = document.getElementById('cfg-redirectUri'); if (gEl) gEl.value = clean;
   }
   toast('Zoho OAuth credentials saved ✓');
+}
+
+function saveResendFrom() {
+  const from = document.getElementById('cfg-resendFrom')?.value?.trim();
+  if (from) {
+    localStorage.setItem('sytesurge_resendFrom', from);
+    toast('Resend from-address saved ✓');
+    refreshConnectedUI();
+  } else {
+    toast('Enter a from-address on your verified domain first');
+  }
 }
 
 // ============================================================
@@ -1111,19 +1150,37 @@ async function getZohoAccessToken() {
 // ---- Provider-agnostic connection UI ----
 function hasProviderToken(provider) {
   provider = provider || getProvider();
+  // Resend authenticates server-side via the Netlify env var, so there is no
+  // per-user token to check — it is always "connected" from the UI's view.
+  if (provider === 'resend') return true;
   return provider === 'zoho'
     ? !!(localStorage.getItem('sytesurge_zohoRefreshToken') && localStorage.getItem('sytesurge_zohoAccountId'))
     : !!localStorage.getItem('sytesurge_refreshToken');
 }
 function getConnectedEmailAddress() {
   const provider = getProvider();
+  if (provider === 'resend') {
+    const from = localStorage.getItem('sytesurge_resendFrom') || 'Sytesurge <info@sytesurge.com>';
+    // Strip any "Name <addr>" wrapper for display.
+    const m = from.match(/<(.+)>/);
+    return m ? m[1] : from;
+  }
   const email = provider === 'zoho'
     ? localStorage.getItem('sytesurge_zohoEmail')
     : localStorage.getItem('sytesurge_email');
   return email || 'info@sytesurge.com';
 }
-function connectEmail() { getProvider() === 'zoho' ? startZohoOAuth() : startOAuth(); }
-function disconnectEmail() { getProvider() === 'zoho' ? disconnectZoho() : disconnectGmail(); refreshConnectedUI(); }
+function connectEmail() {
+  const p = getProvider();
+  if (p === 'resend') { toast('Resend needs no connect — it sends via your Netlify function.'); return; }
+  p === 'zoho' ? startZohoOAuth() : startOAuth();
+}
+function disconnectEmail() {
+  const p = getProvider();
+  if (p === 'resend') { toast('Resend has no per-user login to disconnect.'); return; }
+  p === 'zoho' ? disconnectZoho() : disconnectGmail();
+  refreshConnectedUI();
+}
 
 function onProviderChange() {
   setProvider(document.getElementById('emailProvider').value);
@@ -1140,7 +1197,7 @@ function refreshConnectedUI() {
   const lbl  = document.getElementById('senderLabel');
   const banner = document.getElementById('authBanner');
   const bannerText = document.getElementById('authBannerText');
-  const providerLabel = provider === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  const providerLabel = provider === 'resend' ? 'Resend' : (provider === 'zoho' ? 'Zoho Mail' : 'Gmail');
   if (btn) btn.textContent = '🔐 Connect ' + providerLabel;
 
   const connected = hasProviderToken(provider);
@@ -1229,8 +1286,34 @@ async function sendZoho(to, subject, bodyHtml) {
   }
 }
 
+// Resend — sends via our own Netlify function (netlify/functions/resend-send.js).
+// The API key stays server-side; the browser only ever sees to/subject/html.
+// No OAuth, no tokens, no per-user connect step — the key is set once in
+// Netlify's environment variables and works for every send.
+async function sendResend(to, subject, bodyHtml) {
+  const from = localStorage.getItem('sytesurge_resendFrom') || 'Sytesurge <info@sytesurge.com>';
+  try {
+    const r = await fetch('/.netlify/functions/resend-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, html: bodyHtml, from })
+    });
+    const d = await r.json().catch(() => ({}));
+    // Require Resend's message id (relayed by our function) as proof of acceptance.
+    if (!r.ok || !d.ok || !d.id) {
+      return { ok:false, error: d.error || ('Resend proxy returned HTTP ' + r.status) };
+    }
+    return { ok:true, error:null };
+  } catch(e) {
+    return { ok:false, error:'Network error: ' + e.message };
+  }
+}
+
 async function sendEmail(to, subject, bodyHtml) {
-  return getProvider() === 'zoho' ? sendZoho(to, subject, bodyHtml) : sendGmail(to, subject, bodyHtml);
+  const p = getProvider();
+  if (p === 'resend') return sendResend(to, subject, bodyHtml);
+  if (p === 'zoho')   return sendZoho(to, subject, bodyHtml);
+  return sendGmail(to, subject, bodyHtml);
 }
 
 // ============================================================
