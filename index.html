@@ -367,7 +367,7 @@ td{padding:9px 12px;vertical-align:middle}
 
 I came across {{business_name}} online — you're running a great {{category}} business in {{city}}. I took a look at your current website, and I think a modern refresh could really help it win more customers (faster load, mobile-friendly, easier to update).
 
-An outdated or hard-to-use site quietly costs local businesses an estimated <strong>{{est_loss}} per year</strong> — visitors who leave before they ever call or book.
+Businesses in your industry can lose an estimated {{est_loss}} a year in missed calls and bookings when their site is slow, outdated, or hard to use on mobile — visitors who leave before they ever reach out.
 
 At Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.
 
@@ -646,6 +646,34 @@ Sytesurge | sytesurge.com</textarea>
   </div>
 
   <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Loss Estimate Methodology — read before using {{est_loss}}</div>
+    <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
+      <b style="color:var(--text)">Not legal advice — this is a methodology explanation, not a substitute for a lawyer.</b> The email's {{est_loss}} figure is a claim about money, and the FTC requires advertisers to have a "reasonable basis" for claims like that. Two changes make this far more defensible than a made-up number:<br><br>
+      <b style="color:var(--text)">1. It's now a range, not a fake-precise number.</b> "$4,200–$9,800" reads as an estimate; "$14,624" reads as a computed fact you'd need to prove.<br>
+      <b style="color:var(--text)">2. The conversion-rate assumption is a real, cited 2026 benchmark</b> — general sites average 2.35% conversion (Contentsquare Digital Experience Benchmark Report, 46B sessions; Ruler Analytics, 110M+ sessions), with a widely-cited "good" range of 2–5%. Urgent-need trades (plumbing, HVAC, electrical) convert far higher — cited local-service benchmarks put genuine emergencies at 12–16% — so the contractor category uses a blended 6–14% range to stay conservative.<br><br>
+      <b style="color:var(--text)">The other two inputs — monthly visitors and average customer value — have no reliable universal citation</b>, so instead of hiding a guess inside the formula, they're editable fields below. Set them based on what you actually know about your market (city size, typical local ticket prices). This is normal business judgment, the same way a salesperson estimates a ballpark — it's materially different from Claude/the dashboard asserting a precise "fact" with no basis.<br><br>
+      <b style="color:var(--text)">Also change how the email frames it:</b> the default template now says "businesses in your industry can lose {{est_loss}} a year" — a general industry statement — rather than telling a specific business what it is losing. That framing matters: general statements about an industry are on much firmer ground than a specific claim about one company's numbers.
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>TYPICAL MONTHLY LOCAL SEARCH VISITORS (applies to all categories)</label>
+      <input type="number" id="cfg-monthlyVisitors" placeholder="250" style="width:120px">
+    </div>
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
+      <div class="field"><label>AVG CUSTOMER VALUE — Restaurant ($)</label><input type="number" id="cfg-avgValue-restaurant" placeholder="35"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Retail ($)</label><input type="number" id="cfg-avgValue-retail" placeholder="60"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Health ($)</label><input type="number" id="cfg-avgValue-health" placeholder="150"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Contractor ($)</label><input type="number" id="cfg-avgValue-contractor" placeholder="650"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Salon ($)</label><input type="number" id="cfg-avgValue-salon" placeholder="70"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Automotive ($)</label><input type="number" id="cfg-avgValue-automotive" placeholder="220"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Professional ($)</label><input type="number" id="cfg-avgValue-professional" placeholder="400"></div>
+      <div class="field"><label>AVG CUSTOMER VALUE — Service/Other ($)</label><input type="number" id="cfg-avgValue-service" placeholder="150"></div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveLossSettings()">💾 Save Loss Estimate Settings</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>Resend Setup — recommended, free, no logo</div>
     <div class="step-body" style="font-size:13px;line-height:1.75;color:var(--muted)">
       This is the recommended sender. Resend's free tier sends <b style="color:var(--text)">3,000 emails/month (100/day)</b> with <b style="color:var(--text)">no branding or logo</b> on your emails, and needs no credit card. The API key stays on the server (Netlify), never in this page.<br><br>
@@ -865,6 +893,13 @@ function loadConfig() {
   if (zsec) { const el = document.getElementById('cfg-zohoClientSecret'); if(el) el.value = zsec; }
   const rFrom = localStorage.getItem('sytesurge_resendFrom');
   if (rFrom) { const el = document.getElementById('cfg-resendFrom'); if(el) el.value = rFrom; }
+  const mv = localStorage.getItem('sytesurge_monthlyVisitors');
+  { const el = document.getElementById('cfg-monthlyVisitors'); if(el) el.value = mv || DEFAULT_MONTHLY_VISITORS; }
+  ['restaurant','retail','health','contractor','salon','automotive','professional','service'].forEach(cat => {
+    const stored = localStorage.getItem('sytesurge_avgValue_' + cat);
+    const el = document.getElementById('cfg-avgValue-' + cat);
+    if (el) el.value = stored || DEFAULT_AVG_VALUE[cat];
+  });
   const autoOn = localStorage.getItem('sytesurge_autoReply') === '1';
   const autoEl = document.getElementById('autoReplyToggle');
   if (autoEl) autoEl.checked = autoOn;
@@ -899,6 +934,21 @@ function saveZohoClientId() {
     const gEl = document.getElementById('cfg-redirectUri'); if (gEl) gEl.value = clean;
   }
   toast('Zoho OAuth credentials saved ✓');
+}
+
+function saveLossSettings() {
+  const mv = document.getElementById('cfg-monthlyVisitors')?.value;
+  if (mv) localStorage.setItem('sytesurge_monthlyVisitors', mv);
+  const cats = ['restaurant','retail','health','contractor','salon','automotive','professional','service'];
+  cats.forEach(cat => {
+    const v = document.getElementById('cfg-avgValue-' + cat)?.value;
+    if (v) localStorage.setItem('sytesurge_avgValue_' + cat, v);
+  });
+  // Re-price any leads already in memory so the change is visible immediately.
+  state.leads.forEach(l => { l.loss = estimateLoss(l.cat); });
+  state.campaign.forEach(c => { c.loss = estimateLoss(c.cat); });
+  renderLeads(); renderCampaign(); updateScanStats();
+  toast('Loss estimate settings saved ✓ — re-priced existing leads');
 }
 
 function saveResendFrom() {
@@ -1372,12 +1422,75 @@ const SEED = [
   {name:"Mendham Shoe Repair",cat:"service",addr:"19 Main St, Mendham NJ",email:"mendhamshoerepair@gmail.com",phone:"(908)543-8855",rating:4.0},
 ];
 
-const LOSS_MULTIPLIERS = { restaurant:1.4, retail:1.2, health:1.6, contractor:1.8, salon:1.1, automotive:1.5, professional:2.0, service:1.0 };
 const LOSS_REASONS = { restaurant:"No online menu, hours, or ordering → customers choose competitors with websites", retail:"Missing from Google Shopping & local search → foot traffic lost daily", health:"Patients pick visible competitors first → appointments going elsewhere", contractor:"Google Maps ranks listed contractors above you — jobs lost before you're called", salon:"No online booking → missed appointments every single day", automotive:"Customers compare shops online — unlisted means invisible", professional:"Clients research firms online before hiring — no site = no trust", service:"No 24/7 quote form = leads lost overnight while you sleep" };
 
+// ============================================================
+//  LOSS ESTIMATE — methodology
+// ------------------------------------------------------------
+// This produces a RANGE, not a single fake-precise number, and every input
+// is either a cited published benchmark or an assumption YOU set (visible
+// and editable in Setup Guide → Loss Estimate Methodology), never a silent
+// made-up constant. Two of the three inputs are genuinely industry data;
+// the other two are business-judgment estimates you control, same as any
+// salesperson would ballpark — not presented as computed fact about a
+// specific business.
+//
+// 1) CONVERSION_BENCHMARKS — the % of visitors a site should convert vs.
+//    typically loses when it's outdated/hard to use. Sourced from 2026
+//    published benchmark reports:
+//      - General median: 2.35% (Contentsquare Digital Experience Benchmark
+//        Report, 46B sessions; Ruler Analytics, 110M+ sessions) — "good"
+//        range widely cited as 2-5%.
+//      - Emergency/urgent trades (plumbing, HVAC, electrical): 12-16%
+//        conversion when found — cited by multiple 2026 local-service SEO
+//        benchmark reports, since these customers convert fast under time
+//        pressure. We use a blended, more conservative 6-14% for the
+//        "contractor" bucket since not all contractor work is a true
+//        emergency call.
+// 2) monthlyVisitors — how much local search interest this type of
+//    business typically sees. There is no reliable universal citation for
+//    this per business, so it defaults to a modest, clearly-labeled
+//    placeholder and IS EDITABLE — set it based on what you know of the
+//    local market size.
+// 3) avgCustomerValue — average value of a converted customer, by
+//    category. Also editable — you know local pricing better than any
+//    generic number could.
+// ============================================================
+const CONVERSION_BENCHMARKS = {
+  contractor:   { low:0.06, high:0.14 }, // urgent-trade-weighted, see note above
+  health:       { low:0.03, high:0.06 },
+  automotive:   { low:0.03, high:0.06 },
+  salon:        { low:0.03, high:0.05 },
+  restaurant:   { low:0.02, high:0.04 },
+  retail:       { low:0.02, high:0.04 },
+  professional: { low:0.02, high:0.05 },
+  service:      { low:0.02, high:0.05 }, // general benchmark default
+};
+const DEFAULT_AVG_VALUE = { restaurant:35, retail:60, health:150, contractor:650, salon:70, automotive:220, professional:400, service:150 };
+const DEFAULT_MONTHLY_VISITORS = 250;
+
+function getAvgCustomerValue(cat) {
+  const stored = localStorage.getItem('sytesurge_avgValue_' + cat);
+  return stored ? parseFloat(stored) : (DEFAULT_AVG_VALUE[cat] || 150);
+}
+function getMonthlyVisitors() {
+  const stored = localStorage.getItem('sytesurge_monthlyVisitors');
+  return stored ? parseFloat(stored) : DEFAULT_MONTHLY_VISITORS;
+}
+
+// Returns {low, high, mid} — always present a RANGE in the UI/email, never
+// collapse to one falsely-precise figure. `mid` exists only for sorting.
 function estimateLoss(cat) {
-  const m = LOSS_MULTIPLIERS[cat] || 1.0;
-  return Math.round(320 * 0.032 * 85 * m * 12);
+  const conv = CONVERSION_BENCHMARKS[cat] || CONVERSION_BENCHMARKS.service;
+  const visitors = getMonthlyVisitors();
+  const value = getAvgCustomerValue(cat);
+  const low  = Math.round(visitors * conv.low  * value * 12 / 100) * 100;
+  const high = Math.round(visitors * conv.high * value * 12 / 100) * 100;
+  return { low, high, mid: Math.round((low + high) / 2) };
+}
+function formatLossRange(loss) {
+  if (!loss) return '$0';
+  return '$' + loss.low.toLocaleString() + '–$' + loss.high.toLocaleString();
 }
 
 // ---- Free, real data via OpenStreetMap (Nominatim geocode + Overpass POIs) ----
@@ -1621,7 +1734,7 @@ async function startScan() {
 
 function updateScanStats() {
   const n = state.leads.length;
-  const tot = state.leads.reduce((s,l)=>s+l.loss,0);
+  const tot = state.leads.reduce((s,l)=>s+l.loss.mid,0);
   document.getElementById('s-found').textContent = n;
   document.getElementById('s-loss').textContent = '$'+(tot/1000).toFixed(0)+'k';
   document.getElementById('s-avg').textContent = n ? '$'+Math.round(tot/n).toLocaleString() : '$0';
@@ -1636,8 +1749,8 @@ function renderLeads() {
     return true;
   });
   list.sort((a,b) => {
-    if (state.leadSort==='loss_d') return b.loss-a.loss;
-    if (state.leadSort==='loss_a') return a.loss-b.loss;
+    if (state.leadSort==='loss_d') return b.loss.mid-a.loss.mid;
+    if (state.leadSort==='loss_a') return a.loss.mid-b.loss.mid;
     if (state.leadSort==='name')   return a.name.localeCompare(b.name);
     if (state.leadSort==='rating') return (b.rating??-1)-(a.rating??-1);
     return 0;
@@ -1653,7 +1766,7 @@ function renderLeads() {
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${l.email || '<span style="color:var(--muted)">— no email —</span>'}</td>
       <td style="font-size:11px">${l.phone || '<span style="color:var(--muted)">—</span>'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px">${l.rating==null?'<span style="color:var(--muted)">—</span>':'⭐'+l.rating}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600">$${l.loss.toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600">${formatLossRange(l.loss)}</td>
       <td style="font-size:11px;color:var(--muted);max-width:160px;line-height:1.4">${l.reason}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-primary btn-sm" onclick="addToCampaign('${l.id}')">📧</button>
@@ -1678,8 +1791,8 @@ function exportLeads() {
   if (!state.leads.length) return toast('No leads');
   const sel = state.leads.filter(l => l.selected);
   if (!sel.length) return toast('Check the boxes for the leads you want, then Export');
-  const csv = ['Name,Owner,Cat,Address,Email,Phone,Website,Rating,Est_Loss/yr,Reason']
-    .concat(sel.map(l=>`"${l.name}","${l.owner||''}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss},"${l.reason}"`))
+  const csv = ['Name,Owner,Cat,Address,Email,Phone,Website,Rating,Est_Loss_Low/yr,Est_Loss_High/yr,Reason']
+    .concat(sel.map(l=>`"${l.name}","${l.owner||''}","${l.cat}","${l.addr}","${l.email||''}","${l.phone||''}","${l.website||''}",${l.rating==null?'':l.rating},${l.loss.low},${l.loss.high},"${l.reason}"`))
     .join('\n');
   dl(csv,'sytesurge_leads.csv');
   toast(`Exported ${sel.length} selected lead(s) ✓`);
@@ -1782,7 +1895,7 @@ function getEmail(biz) {
   const vars = {
     '{{business_name}}': biz.name, '{{owner_name}}': (biz.owner && biz.owner.trim()) || 'there', '{{category}}': biz.cat,
     '{{city}}': biz.addr?.split(',')[1]?.trim()||'your area',
-    '{{est_loss}}': '$'+biz.loss?.toLocaleString(), '{{rating}}': (biz.rating==null?'n/a':biz.rating)
+    '{{est_loss}}': formatLossRange(biz.loss), '{{rating}}': (biz.rating==null?'n/a':biz.rating)
   };
   Object.entries(vars).forEach(([k,v])=>{ sub=sub.replaceAll(k,v); body=body.replaceAll(k,v); });
   // Make links clickable: if you write your own <a> tag it's left as-is; otherwise
@@ -1810,14 +1923,14 @@ function insertVar(v){ const ta=document.getElementById('emailBody'); const s=ta
 function previewEmail(){ const b=state.campaign[0]||state.leads[0]; if(!b)return toast('No leads'); const {subject,body}=getEmail(b); const w=window.open('','_blank','width=680,height=580'); w.document.write(`<html><head><style>body{font-family:Arial;max-width:600px;margin:32px auto;padding:16px;color:#333}</style></head><body><h3>Subject: ${subject}</h3><hr>${body}</body></html>`); }
 function saveTemplate(){ localStorage.setItem('tmpl_subj',document.getElementById('emailSubject').value); localStorage.setItem('tmpl_body',document.getElementById('emailBody').value); toast('Template saved ✓'); }
 function loadTemplate(){ const s=localStorage.getItem('tmpl_subj'),b=localStorage.getItem('tmpl_body'); if(s)document.getElementById('emailSubject').value=s; if(b)document.getElementById('emailBody').value=b; toast('Template loaded ✓'); }
-function resetTemplate(){ document.getElementById('emailSubject').value="A fresh look for {{business_name}}'s website"; document.getElementById('emailBody').value="Hi {{owner_name}},\n\nI came across {{business_name}} online — you're running a great {{category}} business in {{city}}. I took a look at your current website, and I think a modern refresh could really help it win more customers (faster load, mobile-friendly, easier to update).\n\nAn outdated or hard-to-use site quietly costs local businesses an estimated <strong>{{est_loss}} per year</strong> — visitors who leave before they ever call or book.\n\nAt Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.\n\nI'd love to show you a <strong>free mockup</strong> of a redesigned version of your site. No commitment.\n\nReply anytime — happy to send it over.\n\nBest,\n[Your Name]\nSytesurge | sytesurge.com\n\n---\nThis is a commercial email. To unsubscribe, reply with UNSUBSCRIBE."; toast('Reset ✓'); }
+function resetTemplate(){ document.getElementById('emailSubject').value="A fresh look for {{business_name}}'s website"; document.getElementById('emailBody').value="Hi {{owner_name}},\n\nI came across {{business_name}} online — you're running a great {{category}} business in {{city}}. I took a look at your current website, and I think a modern refresh could really help it win more customers (faster load, mobile-friendly, easier to update).\n\nBusinesses in your industry can lose an estimated {{est_loss}} a year in missed calls and bookings when their site is slow, outdated, or hard to use on mobile — visitors who leave before they ever reach out.\n\nAt Sytesurge, we build fast, beautiful, affordable websites for local businesses like yours — we handle everything, including design, hosting, and support.\n\nI'd love to show you a <strong>free mockup</strong> of a redesigned version of your site. No commitment.\n\nReply anytime — happy to send it over.\n\nBest,\n[Your Name]\nSytesurge | sytesurge.com\n\n---\nThis is a commercial email. To unsubscribe, reply with UNSUBSCRIBE."; toast('Reset ✓'); }
 
 async function startCampaign() {
   const pending = state.campaign.filter(c=>c.status==='pending');
   if (!pending.length) return toast('No pending emails');
   const mode = document.getElementById('sendMode').value;
   const delay = parseInt(document.getElementById('emailDelay').value)*1000;
-  const providerLabel = getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  const providerLabel = getProvider() === 'resend' ? 'Resend' : (getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail');
   if (mode==='live' && !hasProviderToken()) return toast('Connect ' + providerLabel + ' first — click Connect in the header');
 
   state.abort.campaign = false;
@@ -2314,7 +2427,7 @@ document.getElementById('mockModal').addEventListener('click',function(e){if(e.t
 function renderComplianceChecklist() {
   const addr = document.getElementById('cfg-address')?.value?.trim() || localStorage.getItem('sytesurge_cfg-address') || '';
   const name = document.getElementById('cfg-yourname')?.value?.trim() || localStorage.getItem('sytesurge_cfg-yourname') || '';
-  const providerLabel = getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail';
+  const providerLabel = getProvider() === 'resend' ? 'Resend' : (getProvider() === 'zoho' ? 'Zoho Mail' : 'Gmail');
   const emailConnected = hasProviderToken();
   const autoOn = localStorage.getItem('sytesurge_autoReply') === '1';
   const unsub = getSuppressionList().length;
